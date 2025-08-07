@@ -1,37 +1,18 @@
-import type { AuthUser, AuthTokens, OauthClients, TokenExchangeParams } from "./types";
+import type { AuthUser, AuthTokens, OauthClient, TokenExchangeParams, ClientConfig } from "./types";
 import fetch from "node-fetch";
 
 /**
  * Configuration for initializing AuthClient.
  */
 export interface AuthClientConfig {
-  clients: {
-    localClient: {
-      CLIENT_ID: string;
-      CLIENT_SECRET: string;
-      REDIRECT_URI: string;
-      AUTH_SERVER_URL: string;
-    };
-    f3AppClient: {
-      CLIENT_ID: string;
-      CLIENT_SECRET: string;
-      REDIRECT_URI: string;
-      AUTH_SERVER_URL: string;
-    };
-    f3App2Client: {
-      CLIENT_ID: string;
-      CLIENT_SECRET: string;
-      REDIRECT_URI: string;
-      AUTH_SERVER_URL: string;
-    };
-  };
+  client: ClientConfig;
 }
 
 export class AuthClient {
   private config: AuthClientConfig;
 
   /**
-   * Initialize the AuthClient with OAuth client configs and secrets.
+   * Initialize the AuthClient with OAuth client config and secrets.
    * @param config AuthClientConfig object
    */
   constructor(config: AuthClientConfig) {
@@ -41,23 +22,11 @@ export class AuthClient {
   /**
    * Returns public OAuth client configuration (no secrets).
    */
-  getOAuthConfig(): OauthClients {
+  getOAuthConfig(): OauthClient {
     return {
-      localClient: {
-        CLIENT_ID: this.config.clients.localClient.CLIENT_ID,
-        REDIRECT_URI: this.config.clients.localClient.REDIRECT_URI,
-        AUTH_SERVER_URL: this.config.clients.localClient.AUTH_SERVER_URL,
-      },
-      f3AppClient: {
-        CLIENT_ID: this.config.clients.f3AppClient.CLIENT_ID,
-        REDIRECT_URI: this.config.clients.f3AppClient.REDIRECT_URI,
-        AUTH_SERVER_URL: this.config.clients.f3AppClient.AUTH_SERVER_URL,
-      },
-      f3App2Client: {
-        CLIENT_ID: this.config.clients.f3App2Client.CLIENT_ID,
-        REDIRECT_URI: this.config.clients.f3App2Client.REDIRECT_URI,
-        AUTH_SERVER_URL: this.config.clients.f3App2Client.AUTH_SERVER_URL,
-      },
+      CLIENT_ID: this.config.client.CLIENT_ID,
+      REDIRECT_URI: this.config.client.REDIRECT_URI,
+      AUTH_SERVER_URL: this.config.client.AUTH_SERVER_URL,
     };
   }
 
@@ -67,11 +36,7 @@ export class AuthClient {
    * @returns Token response from the auth provider
    */
   async exchangeCodeForToken(params: TokenExchangeParams): Promise<AuthTokens> {
-    const clientConfig = this.config.clients[params.clientType];
-
-    if (!clientConfig) {
-      throw new Error(`Unknown clientType: ${params.clientType}`);
-    }
+    const clientConfig = this.config.client;
 
     const tokenResponse = await fetch(`${clientConfig.AUTH_SERVER_URL}/api/oauth/token`, {
       method: "POST",

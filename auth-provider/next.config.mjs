@@ -29,10 +29,6 @@ const nextConfig = {
         source: '/api/oauth/:path*',
         headers: [
           {
-            key: 'Access-Control-Allow-Origin',
-            value: 'https://app.freemensworkout.org,https://app2.freemensworkout.org,https://localhost:3001,http://localhost:3001',
-          },
-          {
             key: 'Access-Control-Allow-Methods',
             value: 'GET, POST, OPTIONS',
           },

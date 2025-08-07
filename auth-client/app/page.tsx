@@ -18,36 +18,11 @@ interface OAuthConfig {
   AUTH_SERVER_URL: string;
 }
 
-interface OauthClients {
-  [key: string]: OAuthConfig;
-}
-
 export default function Home() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [oauthConfig, setOauthConfig] = useState<OAuthConfig | null>(null);
-
-  // Get OAuth configuration based on hostname
-  const selectOAuthConfig = (clients: OauthClients): OAuthConfig => {
-    // Check if we're in browser environment
-    if (typeof window === 'undefined') {
-      // Server-side fallback to local development
-      return clients.localClient;
-    }
-
-    const hostname = window.location.hostname;
-
-    // Production configurations
-    if (hostname === 'app.freemensworkout.org') {
-      return clients.f3AppClient;
-    } else if (hostname === 'app2.freemensworkout.org') {
-      return clients.f3App2Client;
-    } else {
-      // Local development fallback
-      return clients.localClient;
-    }
-  };
 
   const handleLogin = () => {
     if (!oauthConfig) {
@@ -76,8 +51,8 @@ export default function Home() {
     const initializeApp = async () => {
       try {
         // Load OAuth configuration using server action
-        const clients = await getOAuthConfig();
-        const config = selectOAuthConfig(clients);
+        // With the new SDK, this returns the single client configuration for this environment
+        const config = await getOAuthConfig();
         setOauthConfig(config);
 
         // Check for stored user info

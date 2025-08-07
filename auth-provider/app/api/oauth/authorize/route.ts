@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { clients } from '@/oauth-clients';
 import {
   validateClient,
   validateRedirectUri,
@@ -102,14 +103,16 @@ export async function GET(request: NextRequest) {
 
       // Create a redirect response with proper headers for cross-origin requests
       const response = NextResponse.redirect(loginUrl.toString());
-
-      // Add headers to help with cross-origin redirects
       const origin = request.headers.get('origin');
       if (origin) {
-        response.headers.set('Access-Control-Allow-Origin', origin);
-        response.headers.set('Access-Control-Allow-Credentials', 'true');
+        const client = clients.find(c => c.id === authRequest.client_id);
+        if (client && origin === client.allowedOrigin) {
+          response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
+          response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+          response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+          response.headers.set('Access-Control-Allow-Credentials', 'true');
+        }
       }
-
       return response;
     }
     // Check if user has completed onboarding (has f3Name and hospitalName)
@@ -128,14 +131,13 @@ export async function GET(request: NextRequest) {
 
       // Create a redirect response with proper headers for cross-origin requests
       const response = NextResponse.redirect(onboardingUrl.toString());
-
-      // Add headers to help with cross-origin redirects
       const origin = request.headers.get('origin');
       if (origin) {
         response.headers.set('Access-Control-Allow-Origin', origin);
+        response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
         response.headers.set('Access-Control-Allow-Credentials', 'true');
       }
-
       return response;
     }
 
@@ -169,7 +171,18 @@ export async function GET(request: NextRequest) {
       redirectUrl.searchParams.set('state', authRequest.state);
     }
 
-    return NextResponse.redirect(redirectUrl.toString());
+    const response = NextResponse.redirect(redirectUrl.toString());
+    const origin = request.headers.get('origin');
+    if (origin) {
+      const client = clients.find(c => c.id === authRequest.client_id);
+      if (client && origin === client.allowedOrigin) {
+        response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
+        response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        response.headers.set('Access-Control-Allow-Credentials', 'true');
+      }
+    }
+    return response;
   } catch (error) {
     console.error('OAuth authorization error:', error);
 
@@ -181,7 +194,18 @@ export async function GET(request: NextRequest) {
       if (authRequest.state) {
         errorUrl.searchParams.set('state', authRequest.state);
       }
-      return NextResponse.redirect(errorUrl.toString());
+      const response = NextResponse.redirect(errorUrl.toString());
+      const origin = request.headers.get('origin');
+      if (origin) {
+        const client = clients.find(c => c.id === authRequest.client_id);
+        if (client && origin === client.allowedOrigin) {
+          response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
+          response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+          response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+          response.headers.set('Access-Control-Allow-Credentials', 'true');
+        }
+      }
+      return response;
     } catch {
       // If redirect_uri is invalid, return JSON error
       return NextResponse.json(

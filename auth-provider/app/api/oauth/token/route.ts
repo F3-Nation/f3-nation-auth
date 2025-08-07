@@ -6,20 +6,29 @@ import {
   refreshAccessToken,
   type TokenRequest,
 } from '@/lib/oauth';
+import { clients } from '@/oauth-clients';
 
 // Add CORS headers
-function addCorsHeaders(response: NextResponse) {
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+function addCorsHeaders(response: NextResponse, origin: string | null, clientId?: string) {
+  if (origin && clientId) {
+    const client = clients.find(c => c.id === clientId);
+    if (client && origin === client.allowedOrigin) {
+      response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      response.headers.set('Access-Control-Allow-Credentials', 'true');
+    }
+  }
   return response;
 }
 
-export async function OPTIONS() {
-  return addCorsHeaders(new NextResponse(null, { status: 200 }));
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('Origin');
+  return addCorsHeaders(new NextResponse(null, { status: 200 }), origin);
 }
 
 export async function POST(request: NextRequest) {
+  const origin = request.headers.get('Origin');
   try {
     const body = await request.formData();
 
@@ -40,7 +49,8 @@ export async function POST(request: NextRequest) {
         NextResponse.json(
           { error: 'invalid_request', error_description: 'Missing required parameters' },
           { status: 400 }
-        )
+        ),
+        origin
       );
     }
 
@@ -51,7 +61,8 @@ export async function POST(request: NextRequest) {
         NextResponse.json(
           { error: 'invalid_client', error_description: 'Invalid client credentials' },
           { status: 401 }
-        )
+        ),
+        origin
       );
     }
 
@@ -62,7 +73,8 @@ export async function POST(request: NextRequest) {
           NextResponse.json(
             { error: 'invalid_request', error_description: 'Missing code or redirect_uri' },
             { status: 400 }
-          )
+          ),
+          origin
         );
       }
 
@@ -79,7 +91,8 @@ export async function POST(request: NextRequest) {
           NextResponse.json(
             { error: 'invalid_grant', error_description: 'Invalid authorization code' },
             { status: 400 }
-          )
+          ),
+          origin
         );
       }
 
@@ -97,7 +110,9 @@ export async function POST(request: NextRequest) {
           expires_in: tokens.expiresIn,
           refresh_token: tokens.refreshToken,
           scope: codeData.scopes.join(' '),
-        })
+        }),
+        origin,
+        tokenRequest.client_id
       );
     } else if (tokenRequest.grant_type === 'refresh_token') {
       // Refresh token flow
@@ -106,7 +121,8 @@ export async function POST(request: NextRequest) {
           NextResponse.json(
             { error: 'invalid_request', error_description: 'Missing refresh_token' },
             { status: 400 }
-          )
+          ),
+          origin
         );
       }
 
@@ -117,7 +133,8 @@ export async function POST(request: NextRequest) {
           NextResponse.json(
             { error: 'invalid_grant', error_description: 'Invalid refresh token' },
             { status: 400 }
-          )
+          ),
+          origin
         );
       }
 
@@ -127,14 +144,17 @@ export async function POST(request: NextRequest) {
           token_type: 'Bearer',
           expires_in: tokens.expiresIn,
           refresh_token: tokens.refreshToken,
-        })
+        }),
+        origin,
+        tokenRequest.client_id
       );
     } else {
       return addCorsHeaders(
         NextResponse.json(
           { error: 'unsupported_grant_type', error_description: 'Grant type not supported' },
           { status: 400 }
-        )
+        ),
+        origin
       );
     }
   } catch (error) {
@@ -143,7 +163,8 @@ export async function POST(request: NextRequest) {
       NextResponse.json(
         { error: 'server_error', error_description: 'Internal server error' },
         { status: 500 }
-      )
+      ),
+      origin
     );
   }
 }

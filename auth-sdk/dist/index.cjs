@@ -36,7 +36,7 @@ module.exports = __toCommonJS(index_exports);
 var import_node_fetch = __toESM(require("node-fetch"), 1);
 var AuthClient = class {
   /**
-   * Initialize the AuthClient with OAuth client configs and secrets.
+   * Initialize the AuthClient with OAuth client config and secrets.
    * @param config AuthClientConfig object
    */
   constructor(config) {
@@ -47,21 +47,9 @@ var AuthClient = class {
    */
   getOAuthConfig() {
     return {
-      localClient: {
-        CLIENT_ID: this.config.clients.localClient.CLIENT_ID,
-        REDIRECT_URI: this.config.clients.localClient.REDIRECT_URI,
-        AUTH_SERVER_URL: this.config.clients.localClient.AUTH_SERVER_URL
-      },
-      f3AppClient: {
-        CLIENT_ID: this.config.clients.f3AppClient.CLIENT_ID,
-        REDIRECT_URI: this.config.clients.f3AppClient.REDIRECT_URI,
-        AUTH_SERVER_URL: this.config.clients.f3AppClient.AUTH_SERVER_URL
-      },
-      f3App2Client: {
-        CLIENT_ID: this.config.clients.f3App2Client.CLIENT_ID,
-        REDIRECT_URI: this.config.clients.f3App2Client.REDIRECT_URI,
-        AUTH_SERVER_URL: this.config.clients.f3App2Client.AUTH_SERVER_URL
-      }
+      CLIENT_ID: this.config.client.CLIENT_ID,
+      REDIRECT_URI: this.config.client.REDIRECT_URI,
+      AUTH_SERVER_URL: this.config.client.AUTH_SERVER_URL
     };
   }
   /**
@@ -70,10 +58,7 @@ var AuthClient = class {
    * @returns Token response from the auth provider
    */
   async exchangeCodeForToken(params) {
-    const clientConfig = this.config.clients[params.clientType];
-    if (!clientConfig) {
-      throw new Error(`Unknown clientType: ${params.clientType}`);
-    }
+    const clientConfig = this.config.client;
     const tokenResponse = await (0, import_node_fetch.default)(`${clientConfig.AUTH_SERVER_URL}/api/oauth/token`, {
       method: "POST",
       headers: {

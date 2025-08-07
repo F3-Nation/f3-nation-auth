@@ -3,6 +3,7 @@ interface OauthClient {
   name: string;
   clientSecret: string;
   redirectUris: string[];
+  allowedOrigin: string;
   scopes: string;
   isActive: boolean;
 }
@@ -13,6 +14,7 @@ export const clients: OauthClient[] = [
     name: 'Local Client',
     clientSecret: process.env.OAUTH_CLIENT_SECRET_LOCAL_CLIENT || '',
     redirectUris: ['https://localhost:3001/callback'],
+    allowedOrigin: 'https://localhost:3001',
     scopes: 'openid profile email',
     isActive: true,
   },
@@ -24,6 +26,7 @@ export const clients: OauthClient[] = [
       'https://app.freemensworkout.org/callback',
       'https://app.freemensworkout.org/auth/callback',
     ],
+    allowedOrigin: 'https://app.freemensworkout.org',
     scopes: 'openid profile email',
     isActive: true,
   },
@@ -35,6 +38,7 @@ export const clients: OauthClient[] = [
       'https://app2.freemensworkout.org/callback',
       'https://app2.freemensworkout.org/auth/callback',
     ],
+    allowedOrigin: 'https://app2.freemensworkout.org',
     scopes: 'openid profile email',
     isActive: true,
   },
@@ -46,6 +50,7 @@ export const clients: OauthClient[] = [
       'https://localhost:3000/callback',
       'https://localhost:3000/api/auth/callback/oauth',
     ],
+    allowedOrigin: 'https://localhost:3000',
     scopes: 'openid profile email',
     isActive: true,
   },
@@ -57,6 +62,31 @@ export const clients: OauthClient[] = [
       'https://auth.f3nation.com/callback',
       'https://auth.f3nation.com/api/auth/callback/oauth',
     ],
+    allowedOrigin: 'https://auth.f3nation.com',
+    scopes: 'openid profile email',
+    isActive: true,
+  },
+  {
+    id: 'codex-staging',
+    name: 'Codex Staging',
+    clientSecret: process.env.OAUTH_CLIENT_SECRET_CODEX_STAGING || '',
+    redirectUris: [
+      'https://keen-custard-ac787f.netlify.app/callback',
+      'https://keen-custard-ac787f.netlify.app/api/auth/callback',
+    ],
+    allowedOrigin: 'https://keen-custard-ac787f.netlify.app',
+    scopes: 'openid profile email',
+    isActive: true,
+  },
+  {
+    id: 'codex-prod',
+    name: 'Codex Production',
+    clientSecret: process.env.OAUTH_CLIENT_SECRET_CODEX_PROD || '',
+    redirectUris: [
+      'https://codex.freemensworkout.org/callback',
+      'https://codex.freemensworkout.org/api/auth/callback',
+    ],
+    allowedOrigin: 'https://codex.freemensworkout.org',
     scopes: 'openid profile email',
     isActive: true,
   },

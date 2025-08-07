@@ -2,25 +2,11 @@ import { describe, it, expect } from "vitest";
 import { AuthClient } from "../src";
 
 const mockConfig = {
-  clients: {
-    localClient: {
-      CLIENT_ID: "test-client-id",
-      CLIENT_SECRET: "test-client-secret",
-      REDIRECT_URI: "https://test.com/callback",
-      AUTH_SERVER_URL: "https://example.com",
-    },
-    f3AppClient: {
-      CLIENT_ID: "test-client-id",
-      CLIENT_SECRET: "test-client-secret",
-      REDIRECT_URI: "https://test.com/callback",
-      AUTH_SERVER_URL: "https://example.com",
-    },
-    f3App2Client: {
-      CLIENT_ID: "test-client-id",
-      CLIENT_SECRET: "test-client-secret",
-      REDIRECT_URI: "https://test.com/callback",
-      AUTH_SERVER_URL: "https://example.com",
-    },
+  client: {
+    CLIENT_ID: "test-client-id",
+    CLIENT_SECRET: "test-client-secret",
+    REDIRECT_URI: "https://test.com/callback",
+    AUTH_SERVER_URL: "https://example.com",
   },
 };
 

@@ -309,7 +309,8 @@ export async function getUserInfo(userId: string, scopes: string[]) {
 export async function registerClient(
   name: string,
   redirectUris: string[],
-  scopes: string[] = ['openid', 'profile', 'email']
+  scopes: string[] = ['openid', 'profile', 'email'],
+  allowedOrigin: string
 ): Promise<{ clientId: string; clientSecret: string }> {
   const clientId = generateSecureToken(16);
   const clientSecret = generateSecureToken(32);
@@ -320,6 +321,7 @@ export async function registerClient(
     clientSecret,
     redirectUris: JSON.stringify(redirectUris),
     scopes: scopes.join(' '),
+    allowedOrigin,
   });
 
   return { clientId, clientSecret };

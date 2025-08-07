@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { clients } from '@/oauth-clients';
+export const config = {
+  matcher: ['/api/oauth/:path*', '/login/:path*', '/onboarding/:path*'],
+};
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : [];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -8,12 +14,9 @@ export function middleware(request: NextRequest) {
   // Handle preflight requests first
   if (request.method === 'OPTIONS') {
     const response = new NextResponse(null, { status: 204 });
-    if (origin) {
-      const client = clients.find(c => c.allowedOrigin === origin);
-      if (client) {
-        response.headers.set('Access-Control-Allow-Origin', origin);
-        response.headers.set('Access-Control-Allow-Credentials', 'true');
-      }
+    if (origin && allowedOrigins.includes(origin)) {
+      response.headers.set('Access-Control-Allow-Origin', origin);
+      response.headers.set('Access-Control-Allow-Credentials', 'true');
     }
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -21,15 +24,12 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  // For OAuth endpoints, validate origins
+  // For OAuth endpoints, set CORS headers if origin is allowed
   if (pathname.startsWith('/api/oauth/')) {
     const response = NextResponse.next();
-    if (origin) {
-      const client = clients.find(c => c.allowedOrigin === origin);
-      if (client) {
-        response.headers.set('Access-Control-Allow-Origin', origin);
-        response.headers.set('Access-Control-Allow-Credentials', 'true');
-      }
+    if (origin && allowedOrigins.includes(origin)) {
+      response.headers.set('Access-Control-Allow-Origin', origin);
+      response.headers.set('Access-Control-Allow-Credentials', 'true');
     }
     response.headers.set('Vary', 'Origin');
     return response;
@@ -48,7 +48,3 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
-
-export const config = {
-  matcher: ['/api/oauth/:path*', '/login/:path*', '/onboarding/:path*'],
-};

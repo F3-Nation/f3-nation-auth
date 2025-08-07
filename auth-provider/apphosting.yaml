@@ -1,0 +1,106 @@
+# Settings for Backend (on Cloud Run).
+# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+runConfig:
+  minInstances: 0
+  # cpu: 1
+  # memoryMiB: 2048
+
+# Environment variables and secrets.
+env:
+  # Database configuration
+  - variable: DATABASE_URL
+    secret: provider-database-url
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # OAuth client secrets
+  - variable: OAUTH_CLIENT_SECRET_LOCAL_CLIENT
+    secret: provider-oauth-client-secret-local-client
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: OAUTH_CLIENT_SECRET_F3_APP_CLIENT
+    secret: provider-oauth-client-secret-f3-app-client
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: OAUTH_CLIENT_SECRET_F3_APP2_CLIENT
+    secret: provider-oauth-client-secret-f3-app2-client
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: OAUTH_CLIENT_SECRET_AUTH_PROVIDER_LOCAL
+    secret: provider-oauth-client-secret-auth-provider-local
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: OAUTH_CLIENT_SECRET_AUTH_PROVIDER_PROD
+    secret: provider-oauth-client-secret-auth-provider-prod
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # NextAuth configuration
+  - variable: NEXTAUTH_SECRET
+    secret: provider-nextauth-secret
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXTAUTH_URL
+    secret: provider-nextauth-url
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_NEXTAUTH_URL
+    secret: provider-next-public-nextauth-url
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Node environment
+  - variable: NODE_ENV
+    secret: provider-node-env
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Firebase service account
+  - variable: FIREBASE_SERVICE_ACCOUNT
+    secret: provider-firebase-service-account
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Twilio credentials
+  - variable: TWILIO_VERIFY_SERVICE_SID
+    secret: provider-twilio-verify-service-sid
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: TWILIO_ACCOUNT_SID
+    secret: provider-twilio-account-sid
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: TWILIO_AUTH_TOKEN
+    secret: provider-twilio-auth-token
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: TWILIO_SENDGRID_API_KEY
+    secret: provider-twilio-sendgrid-api-key
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: TWILIO_SENDGRID_TEMPLATE_ID
+    secret: provider-twilio-sendgrid-template-id
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: PROVIDER_FIREBASE_SERVICE_ACCOUNT
+    secret: provider-firebase-service-account
+    availability:
+      - BUILD
+      - RUNTIME

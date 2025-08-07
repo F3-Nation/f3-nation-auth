@@ -1,0 +1,63 @@
+# Settings for Backend (on Cloud Run).
+# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+runConfig:
+  minInstances: 0
+  # maxInstances: 100
+  # concurrency: 80
+  # cpu: 1
+  # memoryMiB: 512
+
+# Environment variables and secrets.
+env:
+  # Database configuration
+  - variable: DATABASE_URL
+    secret: client-database-url
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # OAuth client secrets
+  - variable: OAUTH_CLIENT_SECRET_LOCAL_CLIENT
+    secret: client-oauth-client-secret-local-client
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: OAUTH_CLIENT_SECRET_F3_APP_CLIENT
+    secret: client-oauth-client-secret-f3-app-client
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: OAUTH_CLIENT_SECRET_F3_APP2_CLIENT
+    secret: client-oauth-client-secret-f3-app2-client
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # NextAuth configuration
+  - variable: NEXTAUTH_SECRET
+    secret: client-nextauth-secret
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXTAUTH_URL
+    secret: client-nextauth-url
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_NEXTAUTH_URL
+    secret: client-next-public-nextauth-url
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Auth Provider URL
+  - variable: AUTH_PROVIDER_URL
+    secret: client-auth-provider-url
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: CLIENT_FIREBASE_SERVICE_ACCOUNT
+    secret: client-firebase-service-account
+    availability:
+      - BUILD
+      - RUNTIME

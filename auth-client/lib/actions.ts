@@ -8,43 +8,25 @@ interface OauthClient {
   AUTH_SERVER_URL: string;
 }
 
-interface OauthClients {
-  [key: string]: OauthClient;
-}
-
 interface TokenExchangeParams {
   code: string;
-  clientType: 'localClient' | 'f3AppClient' | 'f3App2Client';
 }
 
 // Create AuthClient configuration from environment variables
+// This client only knows about itself - no other client secrets needed
 const authConfig: AuthClientConfig = {
-  clients: {
-    localClient: {
-      CLIENT_ID: 'local-client',
-      CLIENT_SECRET: process.env.OAUTH_CLIENT_SECRET_LOCAL_CLIENT || '',
-      REDIRECT_URI: 'https://localhost:3001/callback',
-      AUTH_SERVER_URL: process.env.AUTH_PROVIDER_URL || 'https://localhost:3000',
-    },
-    f3AppClient: {
-      CLIENT_ID: 'f3-app-client',
-      CLIENT_SECRET: process.env.OAUTH_CLIENT_SECRET_F3_APP_CLIENT || '',
-      REDIRECT_URI: 'https://app.freemensworkout.org/callback',
-      AUTH_SERVER_URL: process.env.AUTH_PROVIDER_URL || 'https://localhost:3000',
-    },
-    f3App2Client: {
-      CLIENT_ID: 'f3-app2-client',
-      CLIENT_SECRET: process.env.OAUTH_CLIENT_SECRET_F3_APP2_CLIENT || '',
-      REDIRECT_URI: 'https://app2.freemensworkout.org/callback',
-      AUTH_SERVER_URL: process.env.AUTH_PROVIDER_URL || 'https://localhost:3000',
-    },
+  client: {
+    CLIENT_ID: process.env.OAUTH_CLIENT_ID || '',
+    CLIENT_SECRET: process.env.OAUTH_CLIENT_SECRET || '',
+    REDIRECT_URI: process.env.OAUTH_REDIRECT_URI || '',
+    AUTH_SERVER_URL: process.env.AUTH_PROVIDER_URL || '',
   },
 };
 
 // Create AuthClient instance
 const authClient = new AuthClient(authConfig);
 
-export async function getOAuthConfig(): Promise<OauthClients> {
+export async function getOAuthConfig(): Promise<OauthClient> {
   return authClient.getOAuthConfig();
 }
 

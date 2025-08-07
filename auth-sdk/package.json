@@ -1,6 +1,6 @@
 {
   "name": "f3-nation-auth-sdk",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "",
   "main": "dist/index.js",
   "scripts": {

@@ -41,6 +41,18 @@ env:
       - BUILD
       - RUNTIME
 
+  # Codex client secrets
+  - variable: OAUTH_CLIENT_SECRET_CODEX_STAGING
+    secret: provider-oauth-client-secret-codex-staging
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: OAUTH_CLIENT_SECRET_CODEX_PROD
+    secret: provider-oauth-client-secret-codex-prod
+    availability:
+      - BUILD
+      - RUNTIME
+
   # NextAuth configuration
   - variable: NEXTAUTH_SECRET
     secret: provider-nextauth-secret

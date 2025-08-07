@@ -16,50 +16,33 @@ interface OauthClient {
     REDIRECT_URI: string;
     AUTH_SERVER_URL: string;
 }
-interface OauthClients {
-    [key: string]: OauthClient;
-}
 interface TokenExchangeParams {
     code: string;
-    clientType: "localClient" | "f3AppClient" | "f3App2Client";
+}
+interface ClientConfig {
+    CLIENT_ID: string;
+    CLIENT_SECRET: string;
+    REDIRECT_URI: string;
+    AUTH_SERVER_URL: string;
 }
 
 /**
  * Configuration for initializing AuthClient.
  */
 interface AuthClientConfig {
-    clients: {
-        localClient: {
-            CLIENT_ID: string;
-            CLIENT_SECRET: string;
-            REDIRECT_URI: string;
-            AUTH_SERVER_URL: string;
-        };
-        f3AppClient: {
-            CLIENT_ID: string;
-            CLIENT_SECRET: string;
-            REDIRECT_URI: string;
-            AUTH_SERVER_URL: string;
-        };
-        f3App2Client: {
-            CLIENT_ID: string;
-            CLIENT_SECRET: string;
-            REDIRECT_URI: string;
-            AUTH_SERVER_URL: string;
-        };
-    };
+    client: ClientConfig;
 }
 declare class AuthClient {
     private config;
     /**
-     * Initialize the AuthClient with OAuth client configs and secrets.
+     * Initialize the AuthClient with OAuth client config and secrets.
      * @param config AuthClientConfig object
      */
     constructor(config: AuthClientConfig);
     /**
      * Returns public OAuth client configuration (no secrets).
      */
-    getOAuthConfig(): OauthClients;
+    getOAuthConfig(): OauthClient;
     /**
      * Exchanges an authorization code for access/refresh tokens.
      * @param params TokenExchangeParams

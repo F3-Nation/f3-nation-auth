@@ -25,5 +25,11 @@ export interface OauthClients {
 
 export interface TokenExchangeParams {
   code: string;
-  clientType: "localClient" | "f3AppClient" | "f3App2Client";
+}
+
+export interface ClientConfig {
+  CLIENT_ID: string;
+  CLIENT_SECRET: string;
+  REDIRECT_URI: string;
+  AUTH_SERVER_URL: string;
 }

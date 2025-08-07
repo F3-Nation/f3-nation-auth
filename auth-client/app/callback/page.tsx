@@ -9,53 +9,19 @@ interface OAuthConfig {
   AUTH_SERVER_URL: string;
 }
 
-interface OauthClients {
-  [key: string]: OAuthConfig;
-}
-
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [oauthConfig, setOauthConfig] = useState<OAuthConfig | null>(null);
-  const [clientType, setClientType] = useState<'localClient' | 'f3AppClient' | 'f3App2Client'>(
-    'localClient'
-  );
-
-  // Get OAuth configuration based on hostname
-  const selectOAuthConfig = (
-    clients: OauthClients
-  ): {
-    config: OAuthConfig;
-    clientType: 'localClient' | 'f3AppClient' | 'f3App2Client';
-  } => {
-    // Check if we're in browser environment
-    if (typeof window === 'undefined') {
-      // Server-side fallback to local development
-      return { config: clients.localClient, clientType: 'localClient' };
-    }
-
-    const hostname = window.location.hostname;
-
-    // Production configurations
-    if (hostname === 'app.freemensworkout.org') {
-      return { config: clients.f3AppClient, clientType: 'f3AppClient' };
-    } else if (hostname === 'app2.freemensworkout.org') {
-      return { config: clients.f3App2Client, clientType: 'f3App2Client' };
-    } else {
-      // Local development fallback
-      return { config: clients.localClient, clientType: 'localClient' };
-    }
-  };
 
   useEffect(() => {
     const initializeCallback = async () => {
       try {
         // Load OAuth configuration using server action
-        const clients = await getOAuthConfig();
-        const { config, clientType: selectedClientType } = selectOAuthConfig(clients);
+        // With the new SDK, this returns the single client configuration for this environment
+        const config = await getOAuthConfig();
         setOauthConfig(config);
-        setClientType(selectedClientType);
       } catch (err) {
         console.error('Failed to load OAuth configuration:', err);
         setError('Failed to load OAuth configuration');
@@ -154,7 +120,6 @@ function CallbackContent() {
         // Exchange authorization code for access token using server action
         const tokenData = await exchangeCodeForToken({
           code,
-          clientType,
         });
         const accessToken = tokenData.access_token as string;
 
@@ -190,7 +155,7 @@ function CallbackContent() {
     };
 
     handleCallback();
-  }, [searchParams, router, oauthConfig, clientType]);
+  }, [searchParams, router, oauthConfig]);
 
   if (error) {
     return (

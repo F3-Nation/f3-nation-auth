@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack --port 3000 --experimental-https",
+    "dev": "next dev --port 3000 --experimental-https",
     "build": "next build",
     "start": "next start",
     "lint": "next lint --max-warnings 0",
@@ -13,8 +13,6 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:seed": "bun scripts/db/seed/seed.ts",
-    "db:reset": "bun scripts/db/reset/reset.ts",
     "firebase:secrets": "scripts/firebase-secrets.sh"
   },
   "dependencies": {

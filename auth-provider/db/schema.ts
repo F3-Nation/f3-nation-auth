@@ -40,6 +40,7 @@ export const oauthClients = pgTable('oauth_client', {
   name: text('name').notNull(),
   clientSecret: text('client_secret').notNull(),
   redirectUris: text('redirect_uris').notNull(), // JSON array of allowed redirect URIs
+  allowedOrigin: text('allowed_origin').notNull(), // Allowed CORS origin
   scopes: text('scopes').notNull().default('openid profile email'), // Space-separated scopes
   createdAt: timestamp('created_at').notNull().defaultNow(),
   isActive: boolean('is_active').notNull().default(true),

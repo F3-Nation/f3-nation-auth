@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAccessToken, getUserInfo } from '@/lib/oauth';
-import { clients } from '@/oauth-clients';
+import { db } from '@/db';
+import { oauthClients } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 interface TokenData {
   userId: string;
@@ -9,7 +11,7 @@ interface TokenData {
 }
 
 // Add CORS headers
-function addCorsHeaders(
+async function addCorsHeaders(
   response: NextResponse,
   origin: string | null,
   clientId?: string,
@@ -26,7 +28,11 @@ function addCorsHeaders(
 
   // For non-OPTIONS requests, validate against client config
   if (origin && clientId) {
-    const client = clients.find(c => c.id === clientId);
+    const [client] = await db
+      .select()
+      .from(oauthClients)
+      .where(eq(oauthClients.id, clientId))
+      .limit(1);
     if (client && origin === client.allowedOrigin) {
       response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
       response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -39,7 +45,7 @@ function addCorsHeaders(
 
 export async function OPTIONS(request: NextRequest) {
   const origin = request.headers.get('Origin');
-  return addCorsHeaders(new NextResponse(null, { status: 200 }), origin, undefined, true);
+  return await addCorsHeaders(new NextResponse(null, { status: 200 }), origin, undefined, true);
 }
 
 export async function GET(request: NextRequest) {
@@ -48,7 +54,7 @@ export async function GET(request: NextRequest) {
     // Extract access token from Authorization header
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return addCorsHeaders(
+      return await addCorsHeaders(
         NextResponse.json(
           {
             error: 'invalid_request',
@@ -65,7 +71,7 @@ export async function GET(request: NextRequest) {
     // Validate access token
     const tokenData: TokenData | null = await validateAccessToken(accessToken);
     if (!tokenData) {
-      return addCorsHeaders(
+      return await addCorsHeaders(
         NextResponse.json(
           { error: 'invalid_token', error_description: 'Invalid or expired access token' },
           { status: 401 }
@@ -78,7 +84,7 @@ export async function GET(request: NextRequest) {
     // Get user info based on token scopes
     const userInfo = await getUserInfo(tokenData.userId, tokenData.scopes);
     if (!userInfo) {
-      return addCorsHeaders(
+      return await addCorsHeaders(
         NextResponse.json(
           { error: 'server_error', error_description: 'User not found' },
           { status: 500 }
@@ -87,10 +93,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return addCorsHeaders(NextResponse.json(userInfo), origin, tokenData.clientId);
+    return await addCorsHeaders(NextResponse.json(userInfo), origin, tokenData.clientId);
   } catch (error) {
     console.error('OAuth userinfo error:', error);
-    return addCorsHeaders(
+    return await addCorsHeaders(
       NextResponse.json(
         { error: 'server_error', error_description: 'Internal server error' },
         { status: 500 }

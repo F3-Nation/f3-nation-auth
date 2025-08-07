@@ -33,11 +33,53 @@ function getTwilioVerifyServiceSid() {
   return TWILIO_VERIFY_SERVICE_SID;
 }
 
+import fs from 'fs';
+import path from 'path';
+
 // Store for custom email verification codes (in production, use Redis or database)
 const emailVerificationCodes = new Map<
   string,
   { code: string; expires: number; consumed: boolean }
 >();
+
+// File path for dev code persistence
+const DEV_CODES_FILE = path.resolve(process.cwd(), '.dev-email-codes.json');
+
+// Helper functions for file-based code persistence in development
+function loadDevCodes() {
+  try {
+    if (fs.existsSync(DEV_CODES_FILE)) {
+      const data = fs.readFileSync(DEV_CODES_FILE, 'utf-8');
+      const obj = JSON.parse(data);
+      emailVerificationCodes.clear();
+      for (const [email, value] of Object.entries(obj)) {
+        emailVerificationCodes.set(
+          email,
+          value as { code: string; expires: number; consumed: boolean }
+        );
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load dev email codes:', e);
+  }
+}
+
+function saveDevCodes() {
+  try {
+    const obj: Record<string, { code: string; expires: number; consumed: boolean }> = {};
+    for (const [email, value] of emailVerificationCodes.entries()) {
+      obj[email] = value;
+    }
+    fs.writeFileSync(DEV_CODES_FILE, JSON.stringify(obj, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to save dev email codes:', e);
+  }
+}
+
+// In development, always load codes at module load
+if (process.env.NODE_ENV !== 'production') {
+  loadDevCodes();
+}
 
 // Generate a 6-digit verification code
 function generateVerificationCode(): string {
@@ -96,6 +138,10 @@ export async function createEmailVerification(
 
     // Store the code temporarily
     emailVerificationCodes.set(email, { code, expires, consumed: false });
+    if (!isProduction) saveDevCodes();
+    // Store the code temporarily
+    emailVerificationCodes.set(email, { code, expires, consumed: false });
+    if (process.env.NODE_ENV !== 'production') saveDevCodes();
 
     // Create magic link with the code
     const baseUrl = process.env.NEXTAUTH_URL;
@@ -146,6 +192,7 @@ export async function verifyEmailCode(
 
       if (Date.now() > expires) {
         emailVerificationCodes.delete(email);
+        if (process.env.NODE_ENV !== 'production') saveDevCodes();
         console.log('Custom verification code expired');
         return false;
       }
@@ -159,10 +206,12 @@ export async function verifyEmailCode(
         if (consumeCode) {
           // Mark as consumed instead of deleting immediately
           emailVerificationCodes.set(email, { ...storedVerification, consumed: true });
+          if (process.env.NODE_ENV !== 'production') saveDevCodes();
           console.log('Custom verification code verified and consumed');
           // Clean up after a short delay to prevent immediate re-verification attempts
           setTimeout(() => {
             emailVerificationCodes.delete(email);
+            if (process.env.NODE_ENV !== 'production') saveDevCodes();
           }, 5000);
         } else {
           console.log('Custom verification code verified (not consumed)');

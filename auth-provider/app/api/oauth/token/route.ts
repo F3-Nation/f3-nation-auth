@@ -6,12 +6,18 @@ import {
   refreshAccessToken,
   type TokenRequest,
 } from '@/lib/oauth';
-import { clients } from '@/oauth-clients';
+import { db } from '@/db';
+import { oauthClients } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 // Add CORS headers
-function addCorsHeaders(response: NextResponse, origin: string | null, clientId?: string) {
+async function addCorsHeaders(response: NextResponse, origin: string | null, clientId?: string) {
   if (origin && clientId) {
-    const client = clients.find(c => c.id === clientId);
+    const [client] = await db
+      .select()
+      .from(oauthClients)
+      .where(eq(oauthClients.id, clientId))
+      .limit(1);
     if (client && origin === client.allowedOrigin) {
       response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
       response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -24,7 +30,7 @@ function addCorsHeaders(response: NextResponse, origin: string | null, clientId?
 
 export async function OPTIONS(request: NextRequest) {
   const origin = request.headers.get('Origin');
-  return addCorsHeaders(new NextResponse(null, { status: 200 }), origin);
+  return await addCorsHeaders(new NextResponse(null, { status: 200 }), origin);
 }
 
 export async function POST(request: NextRequest) {
@@ -45,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required parameters
     if (!tokenRequest.grant_type || !tokenRequest.client_id) {
-      return addCorsHeaders(
+      return await addCorsHeaders(
         NextResponse.json(
           { error: 'invalid_request', error_description: 'Missing required parameters' },
           { status: 400 }
@@ -57,7 +63,7 @@ export async function POST(request: NextRequest) {
     // Validate client
     const client = await validateClient(tokenRequest.client_id, tokenRequest.client_secret);
     if (!client) {
-      return addCorsHeaders(
+      return await addCorsHeaders(
         NextResponse.json(
           { error: 'invalid_client', error_description: 'Invalid client credentials' },
           { status: 401 }
@@ -69,7 +75,7 @@ export async function POST(request: NextRequest) {
     if (tokenRequest.grant_type === 'authorization_code') {
       // Authorization code flow
       if (!tokenRequest.code || !tokenRequest.redirect_uri) {
-        return addCorsHeaders(
+        return await addCorsHeaders(
           NextResponse.json(
             { error: 'invalid_request', error_description: 'Missing code or redirect_uri' },
             { status: 400 }
@@ -87,7 +93,7 @@ export async function POST(request: NextRequest) {
       );
 
       if (!codeData) {
-        return addCorsHeaders(
+        return await addCorsHeaders(
           NextResponse.json(
             { error: 'invalid_grant', error_description: 'Invalid authorization code' },
             { status: 400 }
@@ -103,7 +109,7 @@ export async function POST(request: NextRequest) {
         codeData.scopes
       );
 
-      return addCorsHeaders(
+      return await addCorsHeaders(
         NextResponse.json({
           access_token: tokens.accessToken,
           token_type: 'Bearer',
@@ -117,7 +123,7 @@ export async function POST(request: NextRequest) {
     } else if (tokenRequest.grant_type === 'refresh_token') {
       // Refresh token flow
       if (!tokenRequest.refresh_token) {
-        return addCorsHeaders(
+        return await addCorsHeaders(
           NextResponse.json(
             { error: 'invalid_request', error_description: 'Missing refresh_token' },
             { status: 400 }
@@ -129,7 +135,7 @@ export async function POST(request: NextRequest) {
       // Refresh access token
       const tokens = await refreshAccessToken(tokenRequest.refresh_token, tokenRequest.client_id);
       if (!tokens) {
-        return addCorsHeaders(
+        return await addCorsHeaders(
           NextResponse.json(
             { error: 'invalid_grant', error_description: 'Invalid refresh token' },
             { status: 400 }

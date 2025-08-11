@@ -15,7 +15,7 @@ var AuthClient = class {
     return {
       CLIENT_ID: this.config.client.CLIENT_ID,
       REDIRECT_URI: this.config.client.REDIRECT_URI,
-      AUTH_SERVER_URL: this.config.client.AUTH_SERVER_URL
+      AUTH_SERVER_URL: this.config.client.AUTH_SERVER_URL,
     };
   }
   /**
@@ -28,15 +28,15 @@ var AuthClient = class {
     const tokenResponse = await fetch(`${clientConfig.AUTH_SERVER_URL}/api/oauth/token`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
+        "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code: params.code,
         redirect_uri: clientConfig.REDIRECT_URI,
         client_id: clientConfig.CLIENT_ID,
-        client_secret: clientConfig.CLIENT_SECRET
-      })
+        client_secret: clientConfig.CLIENT_SECRET,
+      }),
     });
     if (!tokenResponse.ok) {
       let errorData;
@@ -46,7 +46,7 @@ var AuthClient = class {
         errorData = { error: "Unknown error" };
       }
       throw new Error(
-        `Token exchange failed: ${errorData.error_description || errorData.error || tokenResponse.statusText}`
+        `Token exchange failed: ${errorData.error_description || errorData.error || tokenResponse.statusText}`,
       );
     }
     return tokenResponse.json();
@@ -65,6 +65,4 @@ var AuthClient = class {
     throw new Error("Not implemented");
   }
 };
-export {
-  AuthClient
-};
+export { AuthClient };

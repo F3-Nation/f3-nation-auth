@@ -1,0 +1,19 @@
+{
+  "name": "f3-nation-auth",
+  "version": "1.0.0",
+  "homepage": "https://github.com/F3-Nation/f3-nation-auth#readme",
+  "bugs": {
+    "url": "https://github.com/F3-Nation/f3-nation-auth/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/F3-Nation/f3-nation-auth.git"
+  },
+  "scripts": {
+    "install": "/usr/bin/env bash scripts/install.sh",
+    "build": "/usr/bin/env bash scripts/build.sh",
+    "lint": "/usr/bin/env bash scripts/lint.sh",
+    "typecheck": "/usr/bin/env bash scripts/typecheck.sh",
+    "format": "/usr/bin/env bash scripts/format.sh"
+  }
+}

@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 
-APPS=("auth-provider" "auth-client" "auth-sdk")
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source the shared apps configuration
+source "$SCRIPT_DIR/apps.conf"
 
 echo "# ✨ Formatting all applications..."
 
+# Validate that all apps exist
+validate_apps
+
 for app in "${APPS[@]}"; do
-    if [ ! -d "$app" ]; then
-        echo "Error: Directory $app does not exist"
-        exit 1
-    fi
     
     cd "$app" || exit 1
     echo "## ✨ Formatting $app..."

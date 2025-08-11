@@ -1,0 +1,119 @@
+name: Pull Request Quality Gates
+
+on:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ["auth-client", "auth-provider", "auth-sdk"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ${{ matrix.app }}
+
+      - name: Build project
+        run: npm run build
+        working-directory: ${{ matrix.app }}
+        env:
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXT_PUBLIC_NEXTAUTH_URL: ${{ secrets.NEXT_PUBLIC_NEXTAUTH_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TWILIO_VERIFY_SERVICE_SID: ${{ secrets.TWILIO_VERIFY_SERVICE_SID }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_SENDGRID_API_KEY: ${{ secrets.TWILIO_SENDGRID_API_KEY }}
+          TWILIO_SENDGRID_TEMPLATE_ID: ${{ secrets.TWILIO_SENDGRID_TEMPLATE_ID }}
+          AUTH_PROVIDER_URL: ${{ secrets.AUTH_PROVIDER_URL }}
+          OAUTH_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
+          OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
+          OAUTH_REDIRECT_URI: ${{ secrets.OAUTH_REDIRECT_URI }}
+
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ["auth-client", "auth-provider", "auth-sdk"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ${{ matrix.app }}
+
+      - name: Check lint
+        run: npm run lint
+        working-directory: ${{ matrix.app }}
+
+  format:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ["auth-client", "auth-provider", "auth-sdk"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ${{ matrix.app }}
+
+      - name: Check format
+        run: npm run format:check
+        working-directory: ${{ matrix.app }}
+
+  typecheck:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ["auth-client", "auth-provider", "auth-sdk"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ${{ matrix.app }}
+
+      - name: Check types
+        run: npm run typecheck
+        working-directory: ${{ matrix.app }}

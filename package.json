@@ -14,6 +14,8 @@
     "build": "/usr/bin/env bash scripts/build.sh",
     "lint": "/usr/bin/env bash scripts/lint.sh",
     "typecheck": "/usr/bin/env bash scripts/typecheck.sh",
-    "format": "/usr/bin/env bash scripts/format.sh"
+    "format": "/usr/bin/env bash scripts/format.sh",
+    "test": "/usr/bin/env bash scripts/test.sh",
+    "test:coverage": "/usr/bin/env bash scripts/test-coverage.sh"
   }
 }

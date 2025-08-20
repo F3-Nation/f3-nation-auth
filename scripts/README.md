@@ -22,6 +22,7 @@ All scripts now use a shared configuration file (`apps.conf`) that defines:
 - `typecheck.sh` - Run type checking for all applications
 - `format.sh` - Format code for all applications
 - `build.sh` - Build all applications
+- `test.sh` - Test all applications
 
 ## Adding New Applications
 
@@ -47,6 +48,7 @@ Run any script from the project root:
 ./scripts/typecheck.sh
 ./scripts/format.sh
 ./scripts/build.sh
+./scripts/test.sh
 ```
 
 Each script will:

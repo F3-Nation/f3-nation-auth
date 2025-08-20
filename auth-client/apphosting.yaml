@@ -9,33 +9,13 @@ runConfig:
 
 # Environment variables and secrets.
 env:
-  # Database configuration
-  - variable: DATABASE_URL
-    secret: client-database-url
-    availability:
-      - BUILD
-      - RUNTIME
-
-  # OAuth client secrets
-  - variable: OAUTH_CLIENT_SECRET_LOCAL_CLIENT
-    secret: client-oauth-client-secret-local-client
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: OAUTH_CLIENT_SECRET_F3_APP_CLIENT
-    secret: client-oauth-client-secret-f3-app-client
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: OAUTH_CLIENT_SECRET_F3_APP2_CLIENT
-    secret: client-oauth-client-secret-f3-app2-client
-    availability:
-      - BUILD
-      - RUNTIME
-
-  # NextAuth configuration
   - variable: NEXTAUTH_SECRET
     secret: client-nextauth-secret
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: AUTH_PROVIDER_URL
+    secret: client-auth-provider-url
     availability:
       - BUILD
       - RUNTIME
@@ -49,15 +29,18 @@ env:
     availability:
       - BUILD
       - RUNTIME
-
-  # Auth Provider URL
-  - variable: AUTH_PROVIDER_URL
-    secret: client-auth-provider-url
+  - variable: OAUTH_CLIENT_ID
+    secret: client-oauth-client-id
     availability:
       - BUILD
       - RUNTIME
-  - variable: CLIENT_FIREBASE_SERVICE_ACCOUNT
-    secret: client-firebase-service-account
+  - variable: OAUTH_CLIENT_SECRET
+    secret: client-oauth-client-secret
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: OAUTH_REDIRECT_URI
+    secret: client-oauth-redirect-uri
     availability:
       - BUILD
       - RUNTIME

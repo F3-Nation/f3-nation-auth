@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Configuration constants
-SECRET_VARS=("DATABASE_URL" "NEXTAUTH_SECRET" "AUTH_PROVIDER_URL" "NEXTAUTH_URL" "NEXT_PUBLIC_NEXTAUTH_URL" "OAUTH_CLIENT_SECRET_LOCAL_CLIENT" "OAUTH_CLIENT_SECRET_F3_APP_CLIENT" "OAUTH_CLIENT_SECRET_F3_APP2_CLIENT" "CLIENT_FIREBASE_SERVICE_ACCOUNT")
-SECRET_IDS=("client-database-url" "client-nextauth-secret" "client-auth-provider-url" "client-nextauth-url" "client-next-public-nextauth-url" "client-oauth-client-secret-local-client" "client-oauth-client-secret-f3-app-client" "client-oauth-client-secret-f3-app2-client" "client-firebase-service-account")
+SECRET_VARS=("NEXTAUTH_SECRET" "AUTH_PROVIDER_URL" "NEXTAUTH_URL" "NEXT_PUBLIC_NEXTAUTH_URL" "OAUTH_CLIENT_ID" "OAUTH_CLIENT_SECRET" "OAUTH_REDIRECT_URI")
+SECRET_IDS=("client-nextauth-secret" "client-auth-provider-url" "client-nextauth-url" "client-next-public-nextauth-url" "client-oauth-client-id" "client-oauth-client-secret" "client-oauth-redirect-uri")
 
 #####################################
 # MAIN EXECUTION FUNCTION
@@ -16,7 +16,7 @@ main() {
   local env_file="$project_root/.env.firebase"
 
   # Hardcoded Firebase config
-  local project_id="f3-nation-auth"
+  local project_id="f3-nation-auth-client"
   local backend_id="f3-nation-auth-client"
 
   log_info "Using project ID: $project_id"
@@ -194,7 +194,23 @@ create_temp_secret_files() {
   done
 }
 
-# Create or update secrets in Google Cloud Secret Manager
+# Get current secret value from Google Cloud Secret Manager
+get_current_secret_value() {
+  local project_id="$1"
+  local secret_id="$2"
+  
+  # Try to get the latest version of the secret
+  local current_value
+  if current_value=$(gcloud secrets versions access latest --secret="$secret_id" --project="$project_id" 2>/dev/null); then
+    echo "$current_value"
+    return 0
+  else
+    # Secret or version doesn't exist
+    return 1
+  fi
+}
+
+# Create or update secrets in Google Cloud Secret Manager only if different
 create_or_update_secrets() {
   local project_id="$1"
   local temp_dir="$2"
@@ -204,15 +220,38 @@ create_or_update_secrets() {
   for i in "${!SECRET_VARS[@]}"; do
     local secret_id="${SECRET_IDS[$i]}"
     local temp_file="$temp_dir/$secret_id.txt"
+    local envvar="${SECRET_VARS[$i]}"
+    
+    # Read the new value from temp file
+    local new_value
+    new_value=$(cat "$temp_file")
     
     if gcloud secrets describe "$secret_id" --project="$project_id" --quiet &>/dev/null; then
-      log_info "Secret '$secret_id' exists, adding new version…"
+      # Secret exists, check if value is different
+      local current_value
+      if current_value=$(get_current_secret_value "$project_id" "$secret_id"); then
+        # Compare values (handle potential whitespace/newline differences)
+        local trimmed_current=$(echo "$current_value" | tr -d '\n\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        local trimmed_new=$(echo "$new_value" | tr -d '\n\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        
+        if [ "$trimmed_current" = "$trimmed_new" ]; then
+          log_info "Secret '$secret_id' ($envvar) is unchanged, skipping update"
+          continue
+        else
+          log_info "Secret '$secret_id' ($envvar) has changed, updating..."
+          log_info "Current length: ${#trimmed_current} chars, New length: ${#trimmed_new} chars"
+        fi
+      else
+        log_info "Secret '$secret_id' exists but cannot access current value, updating..."
+      fi
+      
+      # Add new version
       gcloud secrets versions add "$secret_id" \
         --data-file="$temp_file" \
         --project="$project_id" \
         --quiet
     else
-      log_info "Creating secret '$secret_id'…"
+      log_info "Creating secret '$secret_id' ($envvar)…"
       gcloud secrets create "$secret_id" \
         --data-file="$temp_file" \
         --project="$project_id" \

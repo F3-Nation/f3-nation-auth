@@ -2,7 +2,7 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db, type DB } from '@/db';
-import { createEmailVerification, verifyEmailCode } from './twilio/index';
+import { createEmailVerification, verifyEmailCode } from './mfa';
 import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
@@ -59,7 +59,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email and verification code are required');
         }
 
-        // Verify the code with Twilio (and consume it this time)
+        // Verify the code via the MFA service (and consume it this time)
         console.log('Attempting to verify email code for:', credentials.email);
 
         const isValid = await verifyEmailCode(credentials.email, credentials.code, true); // Consume the code

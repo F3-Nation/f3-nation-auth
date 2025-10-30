@@ -26,8 +26,7 @@
     "pg": "^8.11.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "tailwindcss": "^4",
-    "twilio": "^5.8.0"
+    "tailwindcss": "^4"
   },
   "devDependencies": {
     "@types/base64-url": "^2.2.2",
@@ -36,7 +35,6 @@
     "@types/pg": "^8.15.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/twilio": "^3.19.2",
     "bun": "^1.0.0",
     "drizzle-kit": "^0.31.4",
     "eslint": "9.32.0",

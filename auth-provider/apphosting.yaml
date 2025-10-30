@@ -27,21 +27,6 @@ env:
     availability:
       - BUILD
       - RUNTIME
-  - variable: TWILIO_VERIFY_SERVICE_SID
-    secret: provider-twilio-verify-service-sid
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: TWILIO_ACCOUNT_SID
-    secret: provider-twilio-account-sid
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: TWILIO_AUTH_TOKEN
-    secret: provider-twilio-auth-token
-    availability:
-      - BUILD
-      - RUNTIME
   - variable: TWILIO_SENDGRID_API_KEY
     secret: provider-twilio-sendgrid-api-key
     availability:
@@ -49,6 +34,11 @@ env:
       - RUNTIME
   - variable: TWILIO_SENDGRID_TEMPLATE_ID
     secret: provider-twilio-sendgrid-template-id
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: EMAIL_VERIFICATION_SENDER
+    secret: provider-email-verification-sender
     availability:
       - BUILD
       - RUNTIME

@@ -4,11 +4,18 @@ import { useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import ThemeImage from '../../../components/ThemeImage';
 
+type InfoMessage = {
+  type: 'success' | 'error';
+  text: string;
+};
+
 function EmailVerifyContent() {
   const [mounted, setMounted] = useState(false);
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isResending, setIsResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState<InfoMessage | null>(null);
   const hasAutoSubmitted = useRef(false);
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
@@ -28,6 +35,7 @@ function EmailVerifyContent() {
 
       setIsLoading(true);
       setError('');
+      setResendMessage(null);
 
       if (!verificationCode) {
         setError('Verification code is required');
@@ -112,6 +120,53 @@ function EmailVerifyContent() {
     }
   }, [mounted, urlCode, email, handleVerification]);
 
+  const handleResend = useCallback(async () => {
+    if (!email) {
+      setResendMessage({
+        type: 'error',
+        text: 'Email address is missing. Please return and enter your email again.',
+      });
+      return;
+    }
+
+    setResendMessage(null);
+    setIsResending(true);
+    try {
+      const result = await signIn('email', {
+        email,
+        callbackUrl,
+        redirect: false,
+      });
+
+      if (result?.error && result.error !== 'CredentialsSignin') {
+        setResendMessage({
+          type: 'error',
+          text: result.error,
+        });
+      } else {
+        setResendMessage({
+          type: 'success',
+          text: `A new verification code was sent to ${email}.`,
+        });
+      }
+    } catch (resendError) {
+      console.error('Resend error:', resendError);
+      setResendMessage({
+        type: 'error',
+        text: 'Failed to resend the verification code. Please try again.',
+      });
+    } finally {
+      setIsResending(false);
+    }
+  }, [email, callbackUrl]);
+
+  const handleUseDifferentEmail = useCallback(() => {
+    const destination = `/login/email?callbackUrl=${encodeURIComponent(callbackUrl)}${
+      email ? `&email=${encodeURIComponent(email)}` : ''
+    }`;
+    window.location.href = destination;
+  }, [callbackUrl, email]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await handleVerification(code);
@@ -143,6 +198,15 @@ function EmailVerifyContent() {
           />
 
           {error && <p className="text-red-500 text-sm">{error}</p>}
+          {resendMessage && (
+            <p
+              className={`text-sm ${
+                resendMessage.type === 'success' ? 'text-green-600' : 'text-red-500'
+              }`}
+            >
+              {resendMessage.text}
+            </p>
+          )}
 
           <button
             type="submit"
@@ -152,15 +216,23 @@ function EmailVerifyContent() {
             {isLoading ? 'Verifying...' : 'Verify Code'}
           </button>
 
-          <button
-            type="button"
-            onClick={() =>
-              (window.location.href = `/login/email?callbackUrl=${encodeURIComponent(callbackUrl)}`)
-            }
-            className="text-gray-600 hover:text-gray-800 text-sm"
-          >
-            Resend Code
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => void handleResend()}
+              disabled={isResending}
+              className="text-gray-600 hover:text-gray-800 text-sm disabled:text-gray-400"
+            >
+              {isResending ? 'Resending…' : 'Send a new code'}
+            </button>
+            <button
+              type="button"
+              onClick={handleUseDifferentEmail}
+              className="text-gray-600 hover:text-gray-800 text-sm"
+            >
+              Use a different email
+            </button>
+          </div>
         </form>
       )}
 
@@ -169,13 +241,28 @@ function EmailVerifyContent() {
           <p className="text-red-500 text-sm text-center">{error}</p>
           <button
             type="button"
-            onClick={() =>
-              (window.location.href = `/login/email?callbackUrl=${encodeURIComponent(callbackUrl)}`)
-            }
-            className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg"
+            onClick={() => void handleResend()}
+            disabled={isResending}
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg"
           >
-            Try Again
+            {isResending ? 'Resending…' : 'Send a new code'}
           </button>
+          <button
+            type="button"
+            onClick={handleUseDifferentEmail}
+            className="text-gray-600 hover:text-gray-800 text-sm"
+          >
+            Use a different email
+          </button>
+          {resendMessage && (
+            <p
+              className={`text-sm text-center ${
+                resendMessage.type === 'success' ? 'text-green-600' : 'text-red-500'
+              }`}
+            >
+              {resendMessage.text}
+            </p>
+          )}
         </div>
       )}
     </div>

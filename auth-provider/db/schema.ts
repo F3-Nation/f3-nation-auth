@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, primaryKey, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, primaryKey, boolean, index } from 'drizzle-orm/pg-core';
 
 // Users table – stores basic profile info for each user
 export const users = pgTable('user', {
@@ -92,3 +92,21 @@ export const oauthRefreshTokens = pgTable('oauth_refresh_token', {
   expires: timestamp('expires').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+// Email MFA codes – stores verification codes issued for email MFA flows
+export const emailMfaCodes = pgTable(
+  'email_mfa_code',
+  {
+    id: text('id').notNull().primaryKey(),
+    email: text('email').notNull(),
+    codeHash: text('code_hash').notNull(),
+    expiresAt: timestamp('expires_at').notNull(),
+    consumedAt: timestamp('consumed_at'),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  table => ({
+    emailIdx: index('email_mfa_code_email_idx').on(table.email),
+    expiresIdx: index('email_mfa_code_expires_idx').on(table.expiresAt),
+  })
+);

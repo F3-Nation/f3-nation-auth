@@ -2,7 +2,7 @@
 
 ## Overview
 
-Central authentication service for F3 Nation applications using Next.js, NextAuth, and Drizzle ORM with PostgreSQL. This service provides email-based authentication with verification codes sent via Twilio.
+Central authentication service for F3 Nation applications using Next.js, NextAuth, and Drizzle ORM with PostgreSQL. This service provides email-based authentication with verification codes backed by PostgreSQL and delivered via SendGrid.
 
 ## Technical Stack
 
@@ -10,12 +10,13 @@ Central authentication service for F3 Nation applications using Next.js, NextAut
 - NextAuth 4.24.11 with custom email provider
 - Drizzle ORM 0.44.3
 - PostgreSQL database
-- Twilio for email verification
+- SendGrid for transactional email delivery
 - TailwindCSS for styling
 
 ## Key Features
 
 - **Email-based authentication** with verification codes
+- **Custom MFA store** with hashed codes persisted in PostgreSQL
 - **Database sessions** with Drizzle adapter
 - **OAuth provider** for other F3 Nation applications
 - **User onboarding** with F3 name and hospital name
@@ -50,7 +51,7 @@ auth-provider/
 │       └── oauth/               # OAuth endpoints
 ├── lib/
 │   ├── auth.ts                  # NextAuth configuration
-│   └── twilio/
+│   └── mfa/
 │       └── index.ts             # Email verification service
 └── components/
     ├── SignOutButton.tsx        # Sign out component
@@ -69,12 +70,10 @@ NEXTAUTH_URL="http://localhost:3000"
 # Database
 DATABASE_URL="your-postgresql-connection-string"
 
-# Twilio Configuration (for email verification)
-TWILIO_ACCOUNT_SID="your-twilio-account-sid"
-TWILIO_AUTH_TOKEN="your-twilio-auth-token"
-TWILIO_VERIFY_SERVICE_SID="your-twilio-verify-service-sid"
+# Email Verification
 TWILIO_SENDGRID_API_KEY="your-sendgrid-api-key"
 TWILIO_SENDGRID_TEMPLATE_ID="your-sendgrid-template-id"
+EMAIL_VERIFICATION_SENDER="support.auth@f3nation.com"
 
 # OAuth Client Secrets (for F3 applications)
 OAUTH_CLIENT_SECRET_LOCAL_CLIENT="your-local-client-secret"

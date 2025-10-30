@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyEmailCode } from '@/lib/twilio/index';
+import { verifyEmailCode } from '@/lib/mfa';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the code with Twilio (but don't consume it yet)
+    // Verify the code via the MFA service (but don't consume it yet)
     console.log('Attempting to verify email code for:', email);
 
     const isValid = await verifyEmailCode(email, code, false); // Don't consume the code yet

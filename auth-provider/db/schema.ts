@@ -110,3 +110,31 @@ export const emailMfaCodes = pgTable(
     expiresIdx: index('email_mfa_code_expires_idx').on(table.expiresAt),
   })
 );
+
+// Email Change Requests – tracks pending email address changes requiring dual verification
+export const emailChangeRequests = pgTable(
+  'email_change_request',
+  {
+    id: text('id').notNull().primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    currentEmail: text('current_email').notNull(),
+    newEmail: text('new_email').notNull(),
+    oldEmailVerified: boolean('old_email_verified').notNull().default(false),
+    newEmailVerified: boolean('new_email_verified').notNull().default(false),
+    oldEmailCodeHash: text('old_email_code_hash'),
+    newEmailCodeHash: text('new_email_code_hash'),
+    oldEmailVerifiedAt: timestamp('old_email_verified_at'),
+    newEmailVerifiedAt: timestamp('new_email_verified_at'),
+    oldEmailAttemptCount: integer('old_email_attempt_count').notNull().default(0),
+    newEmailAttemptCount: integer('new_email_attempt_count').notNull().default(0),
+    expiresAt: timestamp('expires_at').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    completedAt: timestamp('completed_at'),
+  },
+  table => ({
+    userIdx: index('email_change_request_user_idx').on(table.userId),
+    expiresIdx: index('email_change_request_expires_idx').on(table.expiresAt),
+  })
+);

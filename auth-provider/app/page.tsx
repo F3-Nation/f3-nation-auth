@@ -1,11 +1,10 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
-import ThemeImage from './components/ThemeImage';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import SignOutButton from './components/SignOutButton';
+import ProfilePage from './components/ProfilePage';
 
 interface User {
   name: string;
@@ -30,12 +29,13 @@ export default async function Home({ searchParams }: PageProps) {
     redirect('/login?callbackUrl=/');
   }
 
-  // Check if user has completed onboarding and get F3 name and hospital name
+  // Check if user has completed onboarding and get F3 name, hospital name, and image
   const userResult = await db
     .select({
       onboardingCompleted: users.onboardingCompleted,
       f3Name: users.f3Name,
       hospitalName: users.hospitalName,
+      image: users.image,
     })
     .from(users)
     .where(eq(users.id, session.user.id))
@@ -82,33 +82,13 @@ export default async function Home({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="flex flex-col items-center space-y-4">
-          {session.user.image ? (
-            <ThemeImage
-              src={session.user.image}
-              alt="Profile picture"
-              width={80}
-              height={80}
-              className="rounded-full"
-            />
-          ) : (
-            <ThemeImage
-              src="/f3nation.svg"
-              alt="Profile picture"
-              width={80}
-              height={80}
-              className="rounded-full"
-              priority
-            />
-          )}
-          <h1 className="text-2xl font-bold text-center">{user.f3Name}</h1>
-          <p className="text-lg font-semibold text-center">({user.hospitalName})</p>
-          <p className="text-gray-600 text-center">{session.user.email}</p>
-        </div>
-        <SignOutButton />
-      </div>
-    </div>
+    <ProfilePage
+      user={{
+        f3Name: user.f3Name || '',
+        hospitalName: user.hospitalName || '',
+        email: session.user.email,
+        image: user.image,
+      }}
+    />
   );
 }

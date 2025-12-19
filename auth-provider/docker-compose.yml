@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: f3-auth-postgres
+    environment:
+      POSTGRES_USER: f3auth
+      POSTGRES_PASSWORD: f3auth
+      POSTGRES_DB: f3auth
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

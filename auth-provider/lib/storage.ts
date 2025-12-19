@@ -89,13 +89,15 @@ export async function uploadProfilePicture(
       },
     });
 
-    // Make the file publicly readable
-    await file.makePublic();
+    // Generate a signed URL that expires far in the future (max 7 days for v4 signatures)
+    // We'll use v4 signature with 7 day expiration
+    const [signedUrl] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+      version: 'v4',
+    });
 
-    // Generate public URL
-    const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
-
-    return { success: true, url: publicUrl };
+    return { success: true, url: signedUrl };
   } catch (error) {
     console.error('Error uploading profile picture:', error);
     return { success: false, error: 'Failed to upload image' };
@@ -122,6 +124,7 @@ export async function deleteProfilePicture(userId: string): Promise<void> {
 export function isFirebaseStorageUrl(url: string): boolean {
   return (
     url.includes('firebasestorage.googleapis.com') ||
-    url.includes('f3-nation-auth.firebasestorage.app')
+    url.includes('f3-nation-auth.firebasestorage.app') ||
+    url.includes('storage.googleapis.com/f3-nation-auth') // Signed URLs
   );
 }

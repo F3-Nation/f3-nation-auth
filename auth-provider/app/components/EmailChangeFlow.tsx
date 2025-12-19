@@ -226,12 +226,15 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
   if (step === 'enter-email') {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-bold">Change Email Address</h2>
-        <p className="text-gray-600">Current email: {currentEmail}</p>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Change Email Address</h2>
+        <p className="text-gray-700 dark:text-gray-300">Current email: {currentEmail}</p>
 
         <form onSubmit={handleInitiate} className="space-y-4">
           <div>
-            <label htmlFor="newEmail" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="newEmail"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               New Email Address
             </label>
             <input
@@ -240,7 +243,7 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
               value={newEmail}
               onChange={e => setNewEmail(e.target.value)}
               placeholder="Enter your new email"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
               disabled={isLoading}
               required
             />
@@ -259,7 +262,7 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg"
+              className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-800 text-gray-700 dark:text-white font-medium py-2 px-4 rounded-lg"
             >
               Cancel
             </button>
@@ -280,18 +283,20 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
   if (step === 'verify') {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-bold">Verify Email Change</h2>
-        <p className="text-gray-600">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Verify Email Change</h2>
+        <p className="text-gray-700 dark:text-gray-300">
           We sent verification codes to both your current and new email addresses.
         </p>
 
         {/* Old Email Verification */}
-        <div className="border rounded-lg p-4 space-y-2">
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="font-medium">Current Email</span>
-            {oldEmailVerified && <span className="text-green-600 text-sm">Verified</span>}
+            <span className="font-medium text-gray-900 dark:text-white">Current Email</span>
+            {oldEmailVerified && (
+              <span className="text-green-600 dark:text-green-500 text-sm">Verified</span>
+            )}
           </div>
-          <p className="text-sm text-gray-600">{currentEmail}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">{currentEmail}</p>
           {!oldEmailVerified && (
             <div className="flex gap-2">
               <input
@@ -300,7 +305,7 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
                 onChange={e => setOldCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="Enter 6-digit code"
                 maxLength={6}
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 disabled={isLoading}
               />
               <button
@@ -316,12 +321,14 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
         </div>
 
         {/* New Email Verification */}
-        <div className="border rounded-lg p-4 space-y-2">
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="font-medium">New Email</span>
-            {newEmailVerified && <span className="text-green-600 text-sm">Verified</span>}
+            <span className="font-medium text-gray-900 dark:text-white">New Email</span>
+            {newEmailVerified && (
+              <span className="text-green-600 dark:text-green-500 text-sm">Verified</span>
+            )}
           </div>
-          <p className="text-sm text-gray-600">{newEmail}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">{newEmail}</p>
           {!newEmailVerified && (
             <div className="flex gap-2">
               <input
@@ -330,7 +337,7 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
                 onChange={e => setNewCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="Enter 6-digit code"
                 maxLength={6}
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 disabled={isLoading}
               />
               <button
@@ -352,7 +359,7 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
             type="button"
             onClick={() => handleResend('both')}
             disabled={isLoading}
-            className="flex-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 font-medium py-2 px-4 rounded-lg text-sm"
+            className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-800 text-gray-700 dark:text-white font-medium py-2 px-4 rounded-lg text-sm"
           >
             {isLoading ? 'Sending...' : 'Resend Codes'}
           </button>
@@ -360,7 +367,7 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
             type="button"
             onClick={handleCancel}
             disabled={isLoading}
-            className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg text-sm"
+            className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-800 text-gray-700 dark:text-white font-medium py-2 px-4 rounded-lg text-sm"
           >
             Cancel
           </button>
@@ -373,10 +380,10 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
   if (step === 'success') {
     return (
       <div className="space-y-4 text-center">
-        <div className="text-4xl">&#10003;</div>
+        <div className="text-4xl text-green-600">&#10003;</div>
         <h2 className="text-xl font-bold text-green-600">Email Changed Successfully!</h2>
-        <p className="text-gray-600">Your email is now {newEmail}</p>
-        <p className="text-sm text-gray-500">
+        <p className="text-gray-700 dark:text-gray-300">Your email is now {newEmail}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           For security, you will be signed out. Please sign in again with your new email.
         </p>
         <button
@@ -396,10 +403,12 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
       <div className="space-y-4 text-center">
         <div className="text-4xl text-red-500">&#10005;</div>
         <h2 className="text-xl font-bold text-red-600">Email Change Failed</h2>
-        <p className="text-gray-600">
+        <p className="text-gray-700 dark:text-gray-300">
           Sorry, {newEmail} was claimed by another account while you were verifying.
         </p>
-        <p className="text-sm text-gray-500">Please try again with a different email address.</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Please try again with a different email address.
+        </p>
         <button
           type="button"
           onClick={handleTryAgain}

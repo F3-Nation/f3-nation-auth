@@ -110,7 +110,10 @@ export default function ProfileSettingsForm({
         <div className="w-full space-y-4">
           {/* F3 Name */}
           <div>
-            <label htmlFor="f3Name" className="block text-sm font-medium text-gray-400 mb-1">
+            <label
+              htmlFor="f3Name"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               F3 Name
             </label>
             <input
@@ -119,14 +122,17 @@ export default function ProfileSettingsForm({
               value={f3Name}
               onChange={e => setF3Name(e.target.value)}
               placeholder="Enter your F3 name"
-              className="w-full border border-gray-600 bg-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-white"
+              className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900 dark:text-white"
               disabled={isLoading}
             />
           </div>
 
           {/* Hospital Name */}
           <div>
-            <label htmlFor="hospitalName" className="block text-sm font-medium text-gray-400 mb-1">
+            <label
+              htmlFor="hospitalName"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               Hospital Name
             </label>
             <input
@@ -135,20 +141,22 @@ export default function ProfileSettingsForm({
               value={hospitalName}
               onChange={e => setHospitalName(e.target.value)}
               placeholder="Enter your hospital name"
-              className="w-full border border-gray-600 bg-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-white"
+              className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900 dark:text-white"
               disabled={isLoading}
             />
           </div>
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Email
+            </label>
             <div className="flex items-center gap-2">
-              <p className="text-gray-300 flex-1">{email}</p>
+              <p className="text-gray-700 dark:text-gray-300 flex-1">{email}</p>
               <button
                 type="button"
                 onClick={onEmailChangeClick}
-                className="text-sm text-green-500 hover:text-green-400 font-medium"
+                className="text-sm text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 font-medium"
               >
                 Change
               </button>
@@ -165,7 +173,7 @@ export default function ProfileSettingsForm({
               type="button"
               onClick={handleCancel}
               disabled={isLoading}
-              className="flex-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white font-medium py-2 px-4 rounded-lg"
+              className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-800 text-gray-700 dark:text-white font-medium py-2 px-4 rounded-lg"
             >
               Cancel
             </button>
@@ -173,7 +181,7 @@ export default function ProfileSettingsForm({
               type="button"
               onClick={handleSave}
               disabled={isLoading || !hasChanges}
-              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:text-gray-400 text-white font-medium py-2 px-4 rounded-lg"
+              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:text-gray-500 dark:disabled:text-gray-400 text-white font-medium py-2 px-4 rounded-lg"
             >
               {isLoading ? 'Saving...' : 'Save'}
             </button>
@@ -195,12 +203,12 @@ export default function ProfileSettingsForm({
 
       {/* Name Display */}
       <div className="text-center space-y-1">
-        <h1 className="text-2xl font-bold text-white">{f3Name}</h1>
-        <p className="text-lg text-gray-400">({hospitalName})</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{f3Name}</h1>
+        <p className="text-lg text-gray-600 dark:text-gray-400">({hospitalName})</p>
       </div>
 
       {/* Email */}
-      <p className="text-sm text-gray-500">{email}</p>
+      <p className="text-sm text-gray-500 dark:text-gray-500">{email}</p>
 
       {/* Success Message */}
       {success && <p className="text-green-500 text-sm">{success}</p>}
@@ -209,7 +217,7 @@ export default function ProfileSettingsForm({
       <button
         type="button"
         onClick={() => setIsEditing(true)}
-        className="w-full max-w-xs bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg"
+        className="w-full max-w-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white font-medium py-2 px-4 rounded-lg"
       >
         Edit Profile
       </button>

@@ -95,110 +95,124 @@ export default function ProfileSettingsForm({
     setCurrentImage(null);
   };
 
-  return (
-    <div className="w-full space-y-4">
-      {/* Profile Picture */}
-      <div className="pb-2">
-        <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
-          Profile Picture
-        </label>
+  if (isEditing) {
+    // Edit Mode - Form fields
+    return (
+      <div className="w-full flex flex-col items-center space-y-6">
+        {/* Profile Picture */}
         <ProfilePictureUpload
           currentImageUrl={currentImage}
           onUploadSuccess={handleImageUploadSuccess}
           onDeleteSuccess={handleImageDeleteSuccess}
         />
-      </div>
 
-      {/* F3 Name */}
-      <div>
-        <label htmlFor="f3Name" className="block text-sm font-medium text-gray-700 mb-1">
-          F3 Name
-        </label>
-        {isEditing ? (
-          <input
-            type="text"
-            id="f3Name"
-            value={f3Name}
-            onChange={e => setF3Name(e.target.value)}
-            placeholder="Enter your F3 name"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            disabled={isLoading}
-          />
-        ) : (
-          <p className="text-lg font-semibold">{f3Name}</p>
-        )}
-      </div>
+        {/* Form Fields */}
+        <div className="w-full space-y-4">
+          {/* F3 Name */}
+          <div>
+            <label htmlFor="f3Name" className="block text-sm font-medium text-gray-400 mb-1">
+              F3 Name
+            </label>
+            <input
+              type="text"
+              id="f3Name"
+              value={f3Name}
+              onChange={e => setF3Name(e.target.value)}
+              placeholder="Enter your F3 name"
+              className="w-full border border-gray-600 bg-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-white"
+              disabled={isLoading}
+            />
+          </div>
 
-      {/* Hospital Name */}
-      <div>
-        <label htmlFor="hospitalName" className="block text-sm font-medium text-gray-700 mb-1">
-          Hospital Name
-        </label>
-        {isEditing ? (
-          <input
-            type="text"
-            id="hospitalName"
-            value={hospitalName}
-            onChange={e => setHospitalName(e.target.value)}
-            placeholder="Enter your hospital name"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            disabled={isLoading}
-          />
-        ) : (
-          <p className="text-lg">{hospitalName}</p>
-        )}
-      </div>
+          {/* Hospital Name */}
+          <div>
+            <label htmlFor="hospitalName" className="block text-sm font-medium text-gray-400 mb-1">
+              Hospital Name
+            </label>
+            <input
+              type="text"
+              id="hospitalName"
+              value={hospitalName}
+              onChange={e => setHospitalName(e.target.value)}
+              placeholder="Enter your hospital name"
+              className="w-full border border-gray-600 bg-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-white"
+              disabled={isLoading}
+            />
+          </div>
 
-      {/* Email (read-only with change button) */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-        <div className="flex items-center gap-2">
-          <p className="text-gray-600 flex-1">{email}</p>
-          <button
-            type="button"
-            onClick={onEmailChangeClick}
-            className="text-sm text-green-600 hover:text-green-700 font-medium"
-          >
-            Change
-          </button>
-        </div>
-      </div>
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
+            <div className="flex items-center gap-2">
+              <p className="text-gray-300 flex-1">{email}</p>
+              <button
+                type="button"
+                onClick={onEmailChangeClick}
+                className="text-sm text-green-500 hover:text-green-400 font-medium"
+              >
+                Change
+              </button>
+            </div>
+          </div>
 
-      {/* Error/Success Messages */}
-      {error && <p className="text-red-500 text-sm">{error}</p>}
-      {success && <p className="text-green-600 text-sm">{success}</p>}
+          {/* Error/Success Messages */}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {success && <p className="text-green-500 text-sm">{success}</p>}
 
-      {/* Action Buttons */}
-      <div className="flex gap-2 pt-2">
-        {isEditing ? (
-          <>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={isLoading || !hasChanges}
-              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg"
-            >
-              {isLoading ? 'Saving...' : 'Save Changes'}
-            </button>
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={handleCancel}
               disabled={isLoading}
-              className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg"
+              className="flex-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white font-medium py-2 px-4 rounded-lg"
             >
               Cancel
             </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setIsEditing(true)}
-            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg"
-          >
-            Edit Profile
-          </button>
-        )}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isLoading || !hasChanges}
+              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:text-gray-400 text-white font-medium py-2 px-4 rounded-lg"
+            >
+              {isLoading ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
       </div>
+    );
+  }
+
+  // View Mode - Clean profile display
+  return (
+    <div className="w-full flex flex-col items-center space-y-4">
+      {/* Profile Picture */}
+      <ProfilePictureUpload
+        currentImageUrl={currentImage}
+        onUploadSuccess={handleImageUploadSuccess}
+        onDeleteSuccess={handleImageDeleteSuccess}
+      />
+
+      {/* Name Display */}
+      <div className="text-center space-y-1">
+        <h1 className="text-2xl font-bold text-white">{f3Name}</h1>
+        <p className="text-lg text-gray-400">({hospitalName})</p>
+      </div>
+
+      {/* Email */}
+      <p className="text-sm text-gray-500">{email}</p>
+
+      {/* Success Message */}
+      {success && <p className="text-green-500 text-sm">{success}</p>}
+
+      {/* Edit Button */}
+      <button
+        type="button"
+        onClick={() => setIsEditing(true)}
+        className="w-full max-w-xs bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg"
+      >
+        Edit Profile
+      </button>
     </div>
   );
 }

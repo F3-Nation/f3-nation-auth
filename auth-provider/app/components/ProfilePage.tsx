@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import ThemeImage from './ThemeImage';
 import ProfileSettingsForm from './ProfileSettingsForm';
 import EmailChangeModal from './EmailChangeModal';
 import SignOutButton from './SignOutButton';
@@ -20,27 +19,6 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <div className="w-full max-w-md space-y-6">
-        <div className="flex flex-col items-center space-y-4">
-          {user.image ? (
-            <ThemeImage
-              src={user.image}
-              alt="Profile picture"
-              width={80}
-              height={80}
-              className="rounded-full"
-            />
-          ) : (
-            <ThemeImage
-              src="/f3nation.svg"
-              alt="Profile picture"
-              width={80}
-              height={80}
-              className="rounded-full"
-              priority
-            />
-          )}
-        </div>
-
         <ProfileSettingsForm
           initialF3Name={user.f3Name}
           initialHospitalName={user.hospitalName}

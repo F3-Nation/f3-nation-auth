@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 
 interface ProfilePictureUploadProps {
@@ -21,7 +21,23 @@ export default function ProfilePictureUpload({
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showOptions, setShowOptions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Close popover when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    }
+
+    if (showOptions) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showOptions]);
 
   const compressImage = useCallback(async (file: File): Promise<Blob> => {
     return new Promise((resolve, reject) => {
@@ -75,6 +91,7 @@ export default function ProfilePictureUpload({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setShowOptions(false);
     setError('');
 
     // Validate file type
@@ -131,6 +148,7 @@ export default function ProfilePictureUpload({
   const handleDelete = async () => {
     if (!currentImageUrl) return;
 
+    setShowOptions(false);
     setIsDeleting(true);
     setError('');
 
@@ -156,21 +174,46 @@ export default function ProfilePictureUpload({
   const displayUrl = previewUrl || currentImageUrl;
 
   return (
-    <div className="flex flex-col items-center space-y-4">
-      {/* Image Preview */}
-      <div className="relative w-24 h-24">
-        {displayUrl ? (
-          <Image
-            src={displayUrl}
-            alt="Profile picture"
-            fill
-            className="rounded-full object-cover"
-            unoptimized={!!previewUrl} // Don't optimize blob URLs
-          />
-        ) : (
-          <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center">
+    <div className="flex flex-col items-center">
+      {/* Tappable Profile Picture */}
+      <div className="relative" ref={popoverRef}>
+        <button
+          type="button"
+          onClick={() => setShowOptions(true)}
+          disabled={isUploading || isDeleting}
+          className="relative w-24 h-24 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 rounded-full"
+          aria-label="Change profile photo"
+        >
+          {displayUrl ? (
+            <Image
+              src={displayUrl}
+              alt="Profile picture"
+              fill
+              className="rounded-full object-cover"
+              unoptimized={!!previewUrl}
+            />
+          ) : (
+            <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center">
+              <svg
+                className="w-12 h-12 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
+            </div>
+          )}
+
+          {/* Camera icon overlay */}
+          <div className="absolute bottom-0 right-0 bg-gray-800 rounded-full p-1.5 border-2 border-gray-900 group-hover:bg-gray-700 transition-colors">
             <svg
-              className="w-12 h-12 text-gray-400"
+              className="w-3.5 h-3.5 text-white"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -179,48 +222,60 @@ export default function ProfilePictureUpload({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
           </div>
-        )}
-        {isUploading && (
-          <div className="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+
+          {/* Loading overlay */}
+          {(isUploading || isDeleting) && (
+            <div className="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center">
+              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </button>
+
+        {/* Popover menu */}
+        {showOptions && (
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-10 min-w-[140px]">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 text-left"
+            >
+              Change Photo
+            </button>
+            {currentImageUrl && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 text-left border-t border-gray-100"
+              >
+                Remove Photo
+              </button>
+            )}
           </div>
         )}
       </div>
 
-      {/* Upload/Delete Buttons */}
-      <div className="flex gap-2">
-        <label className="cursor-pointer">
-          <span className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-lg inline-block">
-            {isUploading ? 'Uploading...' : 'Change Photo'}
-          </span>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleFileSelect}
-            disabled={isUploading || isDeleting}
-            className="hidden"
-          />
-        </label>
-
-        {currentImageUrl && (
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={isUploading || isDeleting}
-            className="bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium py-2 px-4 rounded-lg disabled:opacity-50"
-          >
-            {isDeleting ? 'Removing...' : 'Remove'}
-          </button>
-        )}
-      </div>
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={handleFileSelect}
+        disabled={isUploading || isDeleting}
+        className="hidden"
+      />
 
       {/* Error Message */}
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
     </div>
   );
 }

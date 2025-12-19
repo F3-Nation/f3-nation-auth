@@ -172,6 +172,8 @@ export const authOptions: NextAuthOptions = {
             session.user.onboardingCompleted = dbUser.onboardingCompleted;
             session.user.hospitalName = dbUser.hospitalName;
             session.user.f3Name = dbUser.f3Name;
+            // Always use email from database to reflect email changes without requiring sign-out
+            session.user.email = dbUser.email;
           }
         } catch (error) {
           console.error('Error fetching user data in session callback:', error);

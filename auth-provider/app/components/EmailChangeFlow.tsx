@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 type Step = 'enter-email' | 'verify' | 'success' | 'error';
 
@@ -18,6 +18,7 @@ interface PendingChange {
 }
 
 export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFlowProps) {
+  const router = useRouter();
   const [step, setStep] = useState<Step>('enter-email');
   const [newEmail, setNewEmail] = useState('');
   const [requestId, setRequestId] = useState('');
@@ -206,8 +207,10 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
     onClose();
   };
 
-  const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/login' });
+  const handleContinue = () => {
+    // Refresh the page to update session with new email, then close modal
+    router.refresh();
+    onClose();
   };
 
   const handleTryAgain = () => {
@@ -383,15 +386,12 @@ export default function EmailChangeFlow({ currentEmail, onClose }: EmailChangeFl
         <div className="text-4xl text-green-600">&#10003;</div>
         <h2 className="text-xl font-bold text-green-600">Email Changed Successfully!</h2>
         <p className="text-gray-700 dark:text-gray-300">Your email is now {newEmail}</p>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          For security, you will be signed out. Please sign in again with your new email.
-        </p>
         <button
           type="button"
-          onClick={handleSignOut}
+          onClick={handleContinue}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg"
         >
-          Sign In
+          Continue
         </button>
       </div>
     );

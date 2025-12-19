@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import ProfilePictureUpload from './ProfilePictureUpload';
 
 interface ProfileSettingsFormProps {
   initialF3Name: string;
@@ -18,17 +19,14 @@ export default function ProfileSettingsForm({
 }: ProfileSettingsFormProps) {
   const [f3Name, setF3Name] = useState(initialF3Name);
   const [hospitalName, setHospitalName] = useState(initialHospitalName);
-  const [imageUrl, setImageUrl] = useState(initialImage || '');
+  const [currentImage, setCurrentImage] = useState(initialImage);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Track if any changes have been made
-  const hasChanges =
-    f3Name !== initialF3Name ||
-    hospitalName !== initialHospitalName ||
-    imageUrl !== (initialImage || '');
+  // Track if any changes have been made (image is handled separately)
+  const hasChanges = f3Name !== initialF3Name || hospitalName !== initialHospitalName;
 
   useEffect(() => {
     if (success) {
@@ -52,16 +50,13 @@ export default function ProfileSettingsForm({
     setSuccess('');
 
     try {
-      const updateData: { f3Name?: string; hospitalName?: string; image?: string | null } = {};
+      const updateData: { f3Name?: string; hospitalName?: string } = {};
 
       if (f3Name !== initialF3Name) {
         updateData.f3Name = f3Name.trim();
       }
       if (hospitalName !== initialHospitalName) {
         updateData.hospitalName = hospitalName.trim();
-      }
-      if (imageUrl !== (initialImage || '')) {
-        updateData.image = imageUrl.trim() || null;
       }
 
       const response = await fetch('/api/profile', {
@@ -88,13 +83,32 @@ export default function ProfileSettingsForm({
   const handleCancel = () => {
     setF3Name(initialF3Name);
     setHospitalName(initialHospitalName);
-    setImageUrl(initialImage || '');
     setIsEditing(false);
     setError('');
   };
 
+  const handleImageUploadSuccess = (newImageUrl: string) => {
+    setCurrentImage(newImageUrl);
+  };
+
+  const handleImageDeleteSuccess = () => {
+    setCurrentImage(null);
+  };
+
   return (
     <div className="w-full space-y-4">
+      {/* Profile Picture */}
+      <div className="pb-2">
+        <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
+          Profile Picture
+        </label>
+        <ProfilePictureUpload
+          currentImageUrl={currentImage}
+          onUploadSuccess={handleImageUploadSuccess}
+          onDeleteSuccess={handleImageDeleteSuccess}
+        />
+      </div>
+
       {/* F3 Name */}
       <div>
         <label htmlFor="f3Name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -134,27 +148,6 @@ export default function ProfileSettingsForm({
           <p className="text-lg">{hospitalName}</p>
         )}
       </div>
-
-      {/* Profile Image URL (only shown when editing) */}
-      {isEditing && (
-        <div>
-          <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 mb-1">
-            Profile Image URL (optional)
-          </label>
-          <input
-            type="url"
-            id="imageUrl"
-            value={imageUrl}
-            onChange={e => setImageUrl(e.target.value)}
-            placeholder="https://example.com/your-image.jpg"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            disabled={isLoading}
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Enter a URL to an image, or leave blank to use default
-          </p>
-        </div>
-      )}
 
       {/* Email (read-only with change button) */}
       <div>

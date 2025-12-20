@@ -46,6 +46,14 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
     exit 1
 fi
 
+# Strip query parameters that pg_dump doesn't understand (e.g., Supabase-specific params)
+# Keep only sslmode if present
+CLEAN_DB_URL="${DATABASE_URL%%\?*}"
+if [[ "$DATABASE_URL" == *"sslmode="* ]]; then
+    SSLMODE=$(echo "$DATABASE_URL" | grep -oE 'sslmode=[^&]+' | head -1)
+    CLEAN_DB_URL="${CLEAN_DB_URL}?${SSLMODE}"
+fi
+
 # Check for pg_dump
 if ! command -v pg_dump &> /dev/null; then
     echo "Error: pg_dump not found"
@@ -67,7 +75,7 @@ echo "  Directory: $SNAPSHOT_DIR"
 # Dump schema
 if [[ "$DUMP_TYPE" == "full" || "$DUMP_TYPE" == "schema" ]]; then
     echo "  Dumping schema..."
-    pg_dump "$DATABASE_URL" \
+    pg_dump "$CLEAN_DB_URL" \
         --schema-only \
         --no-owner \
         --no-privileges \
@@ -79,7 +87,7 @@ fi
 # Dump data
 if [[ "$DUMP_TYPE" == "full" || "$DUMP_TYPE" == "data" ]]; then
     echo "  Dumping data..."
-    pg_dump "$DATABASE_URL" \
+    pg_dump "$CLEAN_DB_URL" \
         --data-only \
         --no-owner \
         --no-privileges \

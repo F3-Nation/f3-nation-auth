@@ -127,6 +127,68 @@ npm run db:reset
 npm run db:seed
 ```
 
+## Local Development Database
+
+Run a local PostgreSQL instance with Docker for development without affecting staging/production.
+
+### Prerequisites
+
+- Docker Desktop
+- PostgreSQL client tools (`pg_dump`, `psql`)
+  - macOS: `brew install libpq && brew link --force libpq`
+  - Ubuntu: `sudo apt-get install postgresql-client`
+
+### Workflow
+
+```bash
+# Take snapshot from staging/production
+npm run db:snapshot
+
+# Start local PostgreSQL
+npm run db:local:up
+
+# Seed from snapshot
+npm run db:local:seed
+
+# Update .env.local to use local database:
+# DATABASE_URL=postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev
+
+# Run dev server
+npm run dev
+
+# When done
+npm run db:local:down
+```
+
+### Available Commands
+
+| Command                      | Description                                             |
+| ---------------------------- | ------------------------------------------------------- |
+| `npm run db:snapshot`        | Pull full snapshot (schema + data) from remote database |
+| `npm run db:snapshot:schema` | Pull schema only                                        |
+| `npm run db:snapshot:data`   | Pull data only                                          |
+| `npm run db:local:up`        | Start local PostgreSQL container                        |
+| `npm run db:local:down`      | Stop container (preserves data)                         |
+| `npm run db:local:seed`      | Seed local database from latest snapshot                |
+| `npm run db:local:reset`     | Full reset: stop, remove data, start, seed              |
+
+### Connection Details
+
+| Property          | Value                                                            |
+| ----------------- | ---------------------------------------------------------------- |
+| Host              | localhost                                                        |
+| Port              | 5433                                                             |
+| User              | f3auth                                                           |
+| Password          | f3auth_local_dev                                                 |
+| Database          | f3auth_dev                                                       |
+| Connection String | `postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev` |
+
+### Notes
+
+- Snapshots include all tables (sessions, tokens, etc.) for complete debugging
+- Don't share snapshots externally as they contain auth data
+- The `--remove-data` flag on `db:local:down` removes the Docker volume
+
 ## Authentication Flow
 
 1. **User visits login page** and chooses email authentication

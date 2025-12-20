@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: f3-auth-postgres-local
+    environment:
+      POSTGRES_USER: f3auth
+      POSTGRES_PASSWORD: f3auth_local_dev
+      POSTGRES_DB: f3auth_dev
+    ports:
+      - '5433:5432'
+    volumes:
+      - f3auth_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U f3auth -d f3auth_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  f3auth_postgres_data:

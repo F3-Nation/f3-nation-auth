@@ -39,23 +39,56 @@ if ! command -v psql &> /dev/null; then
     exit 1
 fi
 
-# Database configurations
-declare -A DB_URLS=(
-    ["f3auth"]="postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev"
-    ["f3prod"]="postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev"
-)
+# Load environment variables for local database URLs
+load_env_var() {
+    local var_name="$1"
+    local env_file="$PROJECT_DIR/.env.local"
+    if [[ -f "$env_file" ]]; then
+        local value
+        value=$(grep "^${var_name}=" "$env_file" 2>/dev/null | head -1 | cut -d'=' -f2-)
+        # Remove surrounding quotes if present
+        value="${value%\"}"
+        value="${value#\"}"
+        value="${value%\'}"
+        value="${value#\'}"
+        echo "$value"
+    fi
+}
 
-declare -A DB_ENV_VARS=(
-    ["f3auth"]="DATABASE_URL"
-    ["f3prod"]="F3_DATABASE_URL"
-)
+# Get local database URL for a given database name
+get_db_url() {
+    case "$1" in
+        f3auth)
+            local url="${LOCAL_DATABASE_URL:-}"
+            [[ -z "$url" ]] && url=$(load_env_var "LOCAL_DATABASE_URL")
+            [[ -z "$url" ]] && url="postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev"
+            echo "$url"
+            ;;
+        f3prod)
+            local url="${LOCAL_F3_DATABASE_URL:-}"
+            [[ -z "$url" ]] && url=$(load_env_var "LOCAL_F3_DATABASE_URL")
+            [[ -z "$url" ]] && url="postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev"
+            echo "$url"
+            ;;
+    esac
+}
+
+# Get environment variable name for a given database name
+get_env_var() {
+    case "$1" in
+        f3auth) echo "LOCAL_DATABASE_URL" ;;
+        f3prod) echo "LOCAL_F3_DATABASE_URL" ;;
+    esac
+}
 
 # Function to seed a single database
 seed_db() {
     local db_name="$1"
     local custom_snapshot_path="$2"
-    local db_url="${DB_URLS[$db_name]}"
-    local env_var="${DB_ENV_VARS[$db_name]}"
+    local db_url
+    local env_var
+    db_url=$(get_db_url "$db_name")
+    env_var=$(get_env_var "$db_name")
 
     # Determine snapshot path
     local snapshot_path="$custom_snapshot_path"
@@ -97,18 +130,43 @@ seed_db() {
 
     # Drop and recreate public schema to clear all tables
     echo "  Clearing existing data..."
-    psql "$db_url" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" > /dev/null
+    local setup_sql="DROP SCHEMA public CASCADE; CREATE SCHEMA public; CREATE EXTENSION IF NOT EXISTS citext;"
+
+    # For f3prod, also create required types and functions
+    if [[ "$db_name" == "f3prod" ]]; then
+        setup_sql="$setup_sql CREATE TYPE public.user_status AS ENUM ('active', 'inactive');"
+        setup_sql="$setup_sql CREATE OR REPLACE FUNCTION public.set_updated_column() RETURNS TRIGGER AS \$\$ BEGIN NEW.updated = timezone('utc', now()); RETURN NEW; END; \$\$ LANGUAGE plpgsql;"
+    fi
+
+    psql "$db_url" -c "$setup_sql" > /dev/null
 
     # Restore schema
     if [[ "$has_schema" == "true" ]]; then
         echo "  Restoring schema..."
-        psql "$db_url" -f "$snapshot_path/schema.sql" > /dev/null
+        psql "$db_url" -f "$snapshot_path/schema.sql" > /dev/null 2>&1 || true
     fi
 
     # Restore data
-    if [[ "$has_data" == "true" ]]; then
+    if [[ -d "$snapshot_path/csv" ]]; then
+        # CSV format: load each CSV file
+        echo "  Restoring data from CSV files..."
+        for csv_file in "$snapshot_path/csv"/*.csv; do
+            if [[ -f "$csv_file" ]]; then
+                # Extract table name from filename (public_tablename.csv -> public.tablename)
+                local filename=$(basename "$csv_file" .csv)
+                local table_name="${filename/_/.}"
+                local row_count=$(( $(wc -l < "$csv_file" | tr -d ' ') - 1 ))
+                if [[ $row_count -gt 0 ]]; then
+                    echo "    Loading $table_name ($row_count rows)..."
+                    psql "$db_url" -c "\\COPY $table_name FROM '$csv_file' WITH (FORMAT CSV, HEADER)" > /dev/null 2>&1 || {
+                        echo "    Warning: Failed to load $table_name"
+                    }
+                fi
+            fi
+        done
+    elif [[ "$has_data" == "true" ]]; then
         echo "  Restoring data..."
-        psql "$db_url" -f "$snapshot_path/data.sql" > /dev/null
+        psql "$db_url" -f "$snapshot_path/data.sql" > /dev/null 2>&1 || true
     fi
 
     echo ""
@@ -148,6 +206,6 @@ if [[ "$SEED_FAILED" == "true" ]]; then
     exit 1
 fi
 
-echo "To use local databases, update .env.local:"
-echo "  DATABASE_URL=postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev"
-echo "  F3_DATABASE_URL=postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev"
+echo "Local databases seeded. Ensure .env.local has:"
+echo "  LOCAL_DATABASE_URL=postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev"
+echo "  LOCAL_F3_DATABASE_URL=postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev"

@@ -168,36 +168,54 @@ snapshot_db() {
     if [[ "$DUMP_TYPE" == "full" || "$DUMP_TYPE" == "data" ]]; then
         echo "  Dumping data..."
 
-        # Use psql COPY for reliable data export (avoids sequence permission issues)
-        {
-            echo "-- Data dump via COPY"
-            echo "SET session_replication_role = 'replica';"
-            echo ""
+        if [[ -n "$dump_tables" ]]; then
+            # For specific tables: try pg_dump first, fall back to CSV export
+            local table_args=()
+            for table in $dump_tables; do
+                table_args+=(--table="$table")
+            done
 
-            if [[ -n "$dump_tables" ]]; then
-                # Dump specific tables
+            local stderr_file="$SNAPSHOT_DIR/.dump_stderr"
+            # Allow pg_dump to fail - we'll check stderr and use fallback
+            pg_dump "$clean_url" \
+                --data-only \
+                --no-owner \
+                --no-privileges \
+                --inserts \
+                "${table_args[@]}" \
+                > "$SNAPSHOT_DIR/data.sql" 2> "$stderr_file" || true
+
+            if grep -q "permission denied for sequence" "$stderr_file" 2>/dev/null; then
+                echo "    pg_dump failed (sequence permissions), using CSV fallback..."
+                rm -f "$SNAPSHOT_DIR/data.sql"
+                mkdir -p "$SNAPSHOT_DIR/csv"
+
+                # Export each table as CSV
                 for table in $dump_tables; do
-                    echo "-- Table: $table"
-                    echo "COPY $table FROM stdin;"
-                    psql "$clean_url" -c "COPY $table TO STDOUT" 2>/dev/null || true
-                    echo "\\."
-                    echo ""
+                    local csv_file="$SNAPSHOT_DIR/csv/${table//\./_}.csv"
+                    psql "$clean_url" -c "COPY $table TO STDOUT WITH (FORMAT CSV, HEADER)" > "$csv_file" 2>/dev/null
+                    local row_count=$(( $(wc -l < "$csv_file" | tr -d ' ') - 1 ))
+                    echo "    Exported $table ($row_count rows)"
                 done
-            else
-                # Dump all tables from public schema
-                local tables
-                tables=$(psql "$clean_url" -t -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public'" 2>/dev/null | tr -d ' ' | grep -v '^$')
-                for table in $tables; do
-                    echo "-- Table: public.$table"
-                    echo "COPY public.\"$table\" FROM stdin;"
-                    psql "$clean_url" -c "COPY public.\"$table\" TO STDOUT" 2>/dev/null || true
-                    echo "\\."
-                    echo ""
-                done
-            fi
 
-            echo "SET session_replication_role = 'origin';"
-        } > "$SNAPSHOT_DIR/data.sql"
+                # Create a load script
+                cat > "$SNAPSHOT_DIR/data.sql" << 'LOADER'
+-- Data exported as CSV files in csv/ subdirectory
+-- This file is a placeholder - use the seed script to load CSV data
+-- CSV files: csv/*.csv
+LOADER
+            fi
+            rm -f "$stderr_file"
+        else
+            # For full schema dump: use pg_dump
+            pg_dump "$clean_url" \
+                --data-only \
+                --no-owner \
+                --no-privileges \
+                --inserts \
+                --schema=public \
+                > "$SNAPSHOT_DIR/data.sql" 2>/dev/null
+        fi
 
         echo "    Created data.sql ($(wc -c < "$SNAPSHOT_DIR/data.sql" | tr -d ' ') bytes)"
     fi

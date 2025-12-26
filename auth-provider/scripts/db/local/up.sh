@@ -20,7 +20,7 @@ echo "Starting local PostgreSQL..."
 cd "$PROJECT_DIR"
 docker compose up -d
 
-# Wait for PostgreSQL to be ready
+# Wait for PostgreSQL to be ready (primary database)
 echo "Waiting for PostgreSQL to be ready..."
 MAX_ATTEMPTS=30
 ATTEMPT=0
@@ -33,17 +33,39 @@ while ! docker compose exec -T postgres pg_isready -U f3auth -d f3auth_dev &> /d
     sleep 1
 done
 
+# Wait for secondary database (f3prod_dev)
+echo "Verifying f3prod_dev database..."
+ATTEMPT=0
+MAX_SECONDARY_ATTEMPTS=10
+while ! docker compose exec -T postgres pg_isready -U f3prod -d f3prod_dev &> /dev/null; do
+    ATTEMPT=$((ATTEMPT + 1))
+    if [[ $ATTEMPT -ge $MAX_SECONDARY_ATTEMPTS ]]; then
+        echo ""
+        echo "Warning: f3prod_dev database may not be initialized yet"
+        echo "If this is a fresh start, the init script should have run."
+        echo "Run 'npm run db:local:reset' to reinitialize if needed."
+        break
+    fi
+    sleep 1
+done
+
 echo ""
 echo "Local PostgreSQL is ready!"
 echo ""
-echo "Connection details:"
+echo "=== f3auth_dev (DATABASE_URL) ==="
 echo "  Host:     localhost"
 echo "  Port:     5433"
 echo "  User:     f3auth"
 echo "  Password: f3auth_local_dev"
 echo "  Database: f3auth_dev"
+echo "  URL:      postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev"
 echo ""
-echo "Connection string:"
-echo "  postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev"
+echo "=== f3prod_dev (F3_DATABASE_URL) ==="
+echo "  Host:     localhost"
+echo "  Port:     5433"
+echo "  User:     f3prod"
+echo "  Password: f3prod_local_dev"
+echo "  Database: f3prod_dev"
+echo "  URL:      postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev"
 echo ""
-echo "Use 'npm run db:local:seed' to seed with snapshot data"
+echo "Use 'npm run db:local:seed' or 'npm run db:local:seed:all' to seed with snapshot data"

@@ -2,27 +2,31 @@
 set -euo pipefail
 
 # Seed local PostgreSQL from snapshot
-# Usage: ./scripts/db/local/seed.sh [snapshot-path]
+# Usage: ./scripts/db/local/seed.sh [--db f3auth|f3prod|all] [snapshot-path]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
 SNAPSHOTS_DIR="$PROJECT_DIR/db-snapshots"
 
-# Determine snapshot path
-if [[ $# -gt 0 ]]; then
-    SNAPSHOT_PATH="$1"
-else
-    SNAPSHOT_PATH="$SNAPSHOTS_DIR/latest"
-fi
+# Parse arguments
+DB_TARGET="f3auth"
+SNAPSHOT_PATH=""
 
-# Resolve symlink if needed
-if [[ -L "$SNAPSHOT_PATH" ]]; then
-    SNAPSHOT_PATH="$SNAPSHOTS_DIR/$(readlink "$SNAPSHOT_PATH")"
-fi
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --db)
+            DB_TARGET="$2"
+            shift 2
+            ;;
+        *)
+            SNAPSHOT_PATH="$1"
+            shift
+            ;;
+    esac
+done
 
-if [[ ! -d "$SNAPSHOT_PATH" ]]; then
-    echo "Error: Snapshot not found at $SNAPSHOT_PATH"
-    echo "Run 'npm run db:snapshot' first to create a snapshot"
+if [[ ! "$DB_TARGET" =~ ^(f3auth|f3prod|all)$ ]]; then
+    echo "Error: Invalid --db value '$DB_TARGET'. Must be: f3auth, f3prod, or all"
     exit 1
 fi
 
@@ -35,48 +39,115 @@ if ! command -v psql &> /dev/null; then
     exit 1
 fi
 
-# Local database connection
-LOCAL_DB_URL="postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev"
+# Database configurations
+declare -A DB_URLS=(
+    ["f3auth"]="postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev"
+    ["f3prod"]="postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev"
+)
 
-# Check if local PostgreSQL is running
-if ! psql "$LOCAL_DB_URL" -c "SELECT 1" &> /dev/null; then
-    echo "Error: Local PostgreSQL is not running"
-    echo "Run 'npm run db:local:up' first"
-    exit 1
-fi
+declare -A DB_ENV_VARS=(
+    ["f3auth"]="DATABASE_URL"
+    ["f3prod"]="F3_DATABASE_URL"
+)
 
-echo "Seeding local database from snapshot..."
-echo "  Snapshot: $SNAPSHOT_PATH"
+# Function to seed a single database
+seed_db() {
+    local db_name="$1"
+    local custom_snapshot_path="$2"
+    local db_url="${DB_URLS[$db_name]}"
+    local env_var="${DB_ENV_VARS[$db_name]}"
 
-# Check what files exist
-HAS_SCHEMA=false
-HAS_DATA=false
-[[ -f "$SNAPSHOT_PATH/schema.sql" ]] && HAS_SCHEMA=true
-[[ -f "$SNAPSHOT_PATH/data.sql" ]] && HAS_DATA=true
+    # Determine snapshot path
+    local snapshot_path="$custom_snapshot_path"
+    if [[ -z "$snapshot_path" ]]; then
+        snapshot_path="$SNAPSHOTS_DIR/$db_name/latest"
+    fi
 
-if [[ "$HAS_SCHEMA" == "false" && "$HAS_DATA" == "false" ]]; then
-    echo "Error: No schema.sql or data.sql found in snapshot"
-    exit 1
-fi
+    # Resolve symlink if needed
+    if [[ -L "$snapshot_path" ]]; then
+        snapshot_path="$SNAPSHOTS_DIR/$db_name/$(readlink "$snapshot_path")"
+    fi
 
-# Drop and recreate public schema to clear all tables
-echo "  Clearing existing data..."
-psql "$LOCAL_DB_URL" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" > /dev/null
+    if [[ ! -d "$snapshot_path" ]]; then
+        echo "Warning: No snapshot found for $db_name at $snapshot_path"
+        echo "Run 'npm run db:snapshot --db $db_name' first to create a snapshot"
+        return 1
+    fi
 
-# Restore schema
-if [[ "$HAS_SCHEMA" == "true" ]]; then
-    echo "  Restoring schema..."
-    psql "$LOCAL_DB_URL" -f "$SNAPSHOT_PATH/schema.sql" > /dev/null
-fi
+    # Check if local PostgreSQL is running
+    if ! psql "$db_url" -c "SELECT 1" &> /dev/null; then
+        echo "Error: Cannot connect to local $db_name database"
+        echo "Run 'npm run db:local:up' first"
+        return 1
+    fi
 
-# Restore data
-if [[ "$HAS_DATA" == "true" ]]; then
-    echo "  Restoring data..."
-    psql "$LOCAL_DB_URL" -f "$SNAPSHOT_PATH/data.sql" > /dev/null
+    echo "Seeding $db_name database from snapshot..."
+    echo "  Snapshot: $snapshot_path"
+
+    # Check what files exist
+    local has_schema=false
+    local has_data=false
+    [[ -f "$snapshot_path/schema.sql" ]] && has_schema=true
+    [[ -f "$snapshot_path/data.sql" ]] && has_data=true
+
+    if [[ "$has_schema" == "false" && "$has_data" == "false" ]]; then
+        echo "Error: No schema.sql or data.sql found in snapshot"
+        return 1
+    fi
+
+    # Drop and recreate public schema to clear all tables
+    echo "  Clearing existing data..."
+    psql "$db_url" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" > /dev/null
+
+    # Restore schema
+    if [[ "$has_schema" == "true" ]]; then
+        echo "  Restoring schema..."
+        psql "$db_url" -f "$snapshot_path/schema.sql" > /dev/null
+    fi
+
+    # Restore data
+    if [[ "$has_data" == "true" ]]; then
+        echo "  Restoring data..."
+        psql "$db_url" -f "$snapshot_path/data.sql" > /dev/null
+    fi
+
+    echo ""
+    echo "$db_name database seeded successfully!"
+    echo "  $env_var=$db_url"
+}
+
+# Execute based on target
+SEED_FAILED=false
+
+if [[ "$DB_TARGET" == "all" ]]; then
+    echo "Seeding all databases..."
+    echo ""
+
+    if ! seed_db "f3auth" ""; then
+        SEED_FAILED=true
+    fi
+
+    echo ""
+
+    if ! seed_db "f3prod" ""; then
+        SEED_FAILED=true
+    fi
+elif [[ "$DB_TARGET" == "f3auth" ]]; then
+    if ! seed_db "f3auth" "$SNAPSHOT_PATH"; then
+        SEED_FAILED=true
+    fi
+else
+    if ! seed_db "f3prod" "$SNAPSHOT_PATH"; then
+        SEED_FAILED=true
+    fi
 fi
 
 echo ""
-echo "Database seeded successfully!"
-echo ""
-echo "To use the local database, update .env.local:"
+if [[ "$SEED_FAILED" == "true" ]]; then
+    echo "Some databases failed to seed. Check the output above."
+    exit 1
+fi
+
+echo "To use local databases, update .env.local:"
 echo "  DATABASE_URL=postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev"
+echo "  F3_DATABASE_URL=postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev"

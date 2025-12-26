@@ -17,10 +17,18 @@
     "db:snapshot": "scripts/db/snapshot.sh",
     "db:snapshot:schema": "scripts/db/snapshot.sh --type schema",
     "db:snapshot:data": "scripts/db/snapshot.sh --type data",
+    "db:snapshot:f3prod": "scripts/db/snapshot.sh --db f3prod",
+    "db:snapshot:f3prod:schema": "scripts/db/snapshot.sh --db f3prod --type schema",
+    "db:snapshot:f3prod:data": "scripts/db/snapshot.sh --db f3prod --type data",
+    "db:snapshot:all": "scripts/db/snapshot.sh --db all",
     "db:local:up": "scripts/db/local/up.sh",
     "db:local:down": "scripts/db/local/down.sh",
     "db:local:seed": "scripts/db/local/seed.sh",
-    "db:local:reset": "scripts/db/local/reset.sh"
+    "db:local:seed:f3prod": "scripts/db/local/seed.sh --db f3prod",
+    "db:local:seed:all": "scripts/db/local/seed.sh --db all",
+    "db:local:reset": "scripts/db/local/reset.sh",
+    "db:local:reset:f3auth": "scripts/db/local/reset.sh --db f3auth",
+    "db:local:reset:f3prod": "scripts/db/local/reset.sh --db f3prod"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^0.8.2",

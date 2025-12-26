@@ -191,21 +191,21 @@ npm run db:local:down
 
 ### Available Commands
 
-| Command                         | Description                                     |
-| ------------------------------- | ----------------------------------------------- |
-| `npm run db:snapshot`           | Snapshot from DATABASE_URL                      |
-| `npm run db:snapshot:schema`    | Schema only from DATABASE_URL                   |
-| `npm run db:snapshot:data`      | Data only from DATABASE_URL                     |
-| `npm run db:snapshot:f3prod`    | Snapshot from F3_DATABASE_URL                   |
-| `npm run db:snapshot:all`       | Snapshot both deployed databases                |
-| `npm run db:local:up`           | Start local PostgreSQL container                |
-| `npm run db:local:down`         | Stop container (preserves data)                 |
-| `npm run db:local:seed`         | Seed LOCAL_DATABASE_URL from latest snapshot    |
-| `npm run db:local:seed:f3prod`  | Seed LOCAL_F3_DATABASE_URL from latest snapshot |
-| `npm run db:local:seed:all`     | Seed both local databases                       |
-| `npm run db:local:reset`        | Full reset: stop, remove data, start, seed all  |
-| `npm run db:local:reset:f3auth` | Reset and seed f3auth_dev only                  |
-| `npm run db:local:reset:f3prod` | Reset and seed f3prod_dev only                  |
+| Command                         | Description                                    |
+| ------------------------------- | ---------------------------------------------- |
+| `npm run db:snapshot`           | Snapshot from DATABASE_URL                     |
+| `npm run db:snapshot:schema`    | Schema only from DATABASE_URL                  |
+| `npm run db:snapshot:data`      | Data only from DATABASE_URL                    |
+| `npm run db:snapshot:f3prod`    | Snapshot from F3_DATABASE_URL                  |
+| `npm run db:snapshot:all`       | Snapshot both deployed databases               |
+| `npm run db:local:up`           | Start local PostgreSQL container               |
+| `npm run db:local:down`         | Stop container (preserves data)                |
+| `npm run db:local:seed`         | Seed f3auth_dev from latest snapshot           |
+| `npm run db:local:seed:f3prod`  | Seed f3prod_dev from latest snapshot           |
+| `npm run db:local:seed:all`     | Seed both local databases                      |
+| `npm run db:local:reset`        | Full reset: stop, remove data, start, seed all |
+| `npm run db:local:reset:f3auth` | Reset and seed f3auth_dev only                 |
+| `npm run db:local:reset:f3prod` | Reset and seed f3prod_dev only                 |
 
 ### Connection Details
 

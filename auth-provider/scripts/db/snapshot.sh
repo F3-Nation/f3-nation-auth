@@ -113,27 +113,92 @@ snapshot_db() {
     echo "  Type: $DUMP_TYPE"
     echo "  Directory: $SNAPSHOT_DIR"
 
+    # Determine what to dump based on database
+    # For f3prod: dynamically discover auth_* tables plus users table from public schema
+    local dump_tables=""
+    local dump_table_patterns=""
+    if [[ "$db_name" == "f3prod" ]]; then
+        # Will be resolved dynamically: all auth_* tables + users table
+        dump_table_patterns="auth_% users"
+    fi
+
+    # Resolve table patterns to actual table names
+    if [[ -n "$dump_table_patterns" ]]; then
+        local where_clauses=""
+        for pattern in $dump_table_patterns; do
+            if [[ -n "$where_clauses" ]]; then
+                where_clauses="$where_clauses OR "
+            fi
+            if [[ "$pattern" == *"%"* ]]; then
+                where_clauses="${where_clauses}tablename LIKE '$pattern'"
+            else
+                where_clauses="${where_clauses}tablename = '$pattern'"
+            fi
+        done
+        dump_tables=$(psql "$clean_url" -t -c "SELECT 'public.' || tablename FROM pg_tables WHERE schemaname = 'public' AND ($where_clauses) ORDER BY tablename" 2>/dev/null | tr -d ' ' | grep -v '^$' | tr '\n' ' ')
+        echo "  Tables to dump: $dump_tables"
+    fi
+
     # Dump schema
     if [[ "$DUMP_TYPE" == "full" || "$DUMP_TYPE" == "schema" ]]; then
         echo "  Dumping schema..."
+        local schema_args=()
+
+        if [[ -n "$dump_tables" ]]; then
+            # Dump specific tables only
+            for table in $dump_tables; do
+                schema_args+=(--table="$table")
+            done
+        else
+            # Dump entire public schema
+            schema_args+=(--schema=public)
+        fi
+
         pg_dump "$clean_url" \
             --schema-only \
             --no-owner \
             --no-privileges \
             --no-comments \
-            > "$SNAPSHOT_DIR/schema.sql"
+            "${schema_args[@]}" \
+            > "$SNAPSHOT_DIR/schema.sql" 2>/dev/null
         echo "    Created schema.sql ($(wc -c < "$SNAPSHOT_DIR/schema.sql" | tr -d ' ') bytes)"
     fi
 
     # Dump data
     if [[ "$DUMP_TYPE" == "full" || "$DUMP_TYPE" == "data" ]]; then
         echo "  Dumping data..."
-        pg_dump "$clean_url" \
-            --data-only \
-            --no-owner \
-            --no-privileges \
-            --disable-triggers \
-            > "$SNAPSHOT_DIR/data.sql"
+
+        # Use psql COPY for reliable data export (avoids sequence permission issues)
+        {
+            echo "-- Data dump via COPY"
+            echo "SET session_replication_role = 'replica';"
+            echo ""
+
+            if [[ -n "$dump_tables" ]]; then
+                # Dump specific tables
+                for table in $dump_tables; do
+                    echo "-- Table: $table"
+                    echo "COPY $table FROM stdin;"
+                    psql "$clean_url" -c "COPY $table TO STDOUT" 2>/dev/null || true
+                    echo "\\."
+                    echo ""
+                done
+            else
+                # Dump all tables from public schema
+                local tables
+                tables=$(psql "$clean_url" -t -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public'" 2>/dev/null | tr -d ' ' | grep -v '^$')
+                for table in $tables; do
+                    echo "-- Table: public.$table"
+                    echo "COPY public.\"$table\" FROM stdin;"
+                    psql "$clean_url" -c "COPY public.\"$table\" TO STDOUT" 2>/dev/null || true
+                    echo "\\."
+                    echo ""
+                done
+            fi
+
+            echo "SET session_replication_role = 'origin';"
+        } > "$SNAPSHOT_DIR/data.sql"
+
         echo "    Created data.sql ($(wc -c < "$SNAPSHOT_DIR/data.sql" | tr -d ' ') bytes)"
     fi
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Seed local PostgreSQL from snapshot
+# Seed local PostgreSQL from snapshot using database URLs from .env.local
 # Usage: ./scripts/db/local/seed.sh [--db f3auth|f3prod|all] [snapshot-path]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -55,18 +55,18 @@ load_env_var() {
     fi
 }
 
-# Get local database URL for a given database name
+# Get database URL for a given database name from .env.local
 get_db_url() {
     case "$1" in
         f3auth)
-            local url="${LOCAL_DATABASE_URL:-}"
-            [[ -z "$url" ]] && url=$(load_env_var "LOCAL_DATABASE_URL")
+            local url="${DATABASE_URL:-}"
+            [[ -z "$url" ]] && url=$(load_env_var "DATABASE_URL")
             [[ -z "$url" ]] && url="postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev"
             echo "$url"
             ;;
         f3prod)
-            local url="${LOCAL_F3_DATABASE_URL:-}"
-            [[ -z "$url" ]] && url=$(load_env_var "LOCAL_F3_DATABASE_URL")
+            local url="${F3_DATABASE_URL:-}"
+            [[ -z "$url" ]] && url=$(load_env_var "F3_DATABASE_URL")
             [[ -z "$url" ]] && url="postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev"
             echo "$url"
             ;;
@@ -76,8 +76,8 @@ get_db_url() {
 # Get environment variable name for a given database name
 get_env_var() {
     case "$1" in
-        f3auth) echo "LOCAL_DATABASE_URL" ;;
-        f3prod) echo "LOCAL_F3_DATABASE_URL" ;;
+        f3auth) echo "DATABASE_URL" ;;
+        f3prod) echo "F3_DATABASE_URL" ;;
     esac
 }
 
@@ -206,6 +206,6 @@ if [[ "$SEED_FAILED" == "true" ]]; then
     exit 1
 fi
 
-echo "Local databases seeded. Ensure .env.local has:"
-echo "  LOCAL_DATABASE_URL=postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev"
-echo "  LOCAL_F3_DATABASE_URL=postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev"
+echo "Local databases seeded. Your .env.local should have:"
+echo "  DATABASE_URL=postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev"
+echo "  F3_DATABASE_URL=postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev"

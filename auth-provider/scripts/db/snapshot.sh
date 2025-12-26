@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Pull database snapshot from remote DATABASE_URL or F3_DATABASE_URL
+# Pull database snapshot from production databases defined in .env.firebase
 # Usage: ./scripts/db/snapshot.sh [--db f3auth|f3prod|all] [--type full|schema|data]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -55,17 +55,16 @@ load_env_var() {
     echo "$value"
 }
 
-ENV_FILE=""
-if [[ -f "$PROJECT_DIR/.env.local" ]]; then
-    ENV_FILE="$PROJECT_DIR/.env.local"
-elif [[ -f "$PROJECT_DIR/.env" ]]; then
-    ENV_FILE="$PROJECT_DIR/.env"
+# Load production database URLs from .env.firebase (source of truth for snapshots)
+ENV_FILE="$PROJECT_DIR/.env.firebase"
+if [[ ! -f "$ENV_FILE" ]]; then
+    echo "Error: .env.firebase not found at $ENV_FILE"
+    echo "This file should contain production DATABASE_URL and F3_DATABASE_URL"
+    exit 1
 fi
 
-if [[ -n "$ENV_FILE" ]]; then
-    [[ -z "${DATABASE_URL:-}" ]] && DATABASE_URL=$(load_env_var "DATABASE_URL" "$ENV_FILE")
-    [[ -z "${F3_DATABASE_URL:-}" ]] && F3_DATABASE_URL=$(load_env_var "F3_DATABASE_URL" "$ENV_FILE")
-fi
+[[ -z "${DATABASE_URL:-}" ]] && DATABASE_URL=$(load_env_var "DATABASE_URL" "$ENV_FILE")
+[[ -z "${F3_DATABASE_URL:-}" ]] && F3_DATABASE_URL=$(load_env_var "F3_DATABASE_URL" "$ENV_FILE")
 
 # Check for pg_dump
 if ! command -v pg_dump &> /dev/null; then
@@ -96,7 +95,7 @@ snapshot_db() {
     local db_url="${!db_url_var:-}"
     if [[ -z "$db_url" ]]; then
         echo "Error: $db_url_var is not set"
-        echo "Please set it in .env.local or .env"
+        echo "Please set it in .env.firebase"
         return 1
     fi
 

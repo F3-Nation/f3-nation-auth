@@ -131,19 +131,31 @@ npm run db:seed
 
 Run a local PostgreSQL instance with Docker for development without affecting staging/production. The local setup includes two databases:
 
-- **f3auth_dev** - Auth provider database (`LOCAL_DATABASE_URL`)
-- **f3prod_dev** - F3 production data database (`LOCAL_F3_DATABASE_URL`)
+- **f3auth_dev** - Auth provider database (`DATABASE_URL` in `.env.local`)
+- **f3prod_dev** - F3 production data database (`F3_DATABASE_URL` in `.env.local`)
 
-### Environment Variables
+### Environment Files
 
-The workflow uses separate environment variables for deployed vs local databases:
+The workflow uses two environment files to separate concerns:
 
-| Variable                | Purpose                         | Example                                                          |
-| ----------------------- | ------------------------------- | ---------------------------------------------------------------- |
-| `DATABASE_URL`          | Deployed auth database (source) | `postgresql://user:pass@host:5432/db`                            |
-| `F3_DATABASE_URL`       | Deployed F3 database (source)   | `postgresql://user:pass@host:5432/db`                            |
-| `LOCAL_DATABASE_URL`    | Local auth database (target)    | `postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev` |
-| `LOCAL_F3_DATABASE_URL` | Local F3 database (target)      | `postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev` |
+| File            | Purpose                                  | Used By                                  |
+| --------------- | ---------------------------------------- | ---------------------------------------- |
+| `.env.firebase` | Production database URLs for snapshots   | `npm run db:snapshot:*`                  |
+| `.env.local`    | Local development databases & app config | `npm run dev`, `npm run db:local:seed:*` |
+
+**`.env.local`** should contain local database URLs:
+
+```
+DATABASE_URL=postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev
+F3_DATABASE_URL=postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev
+```
+
+**`.env.firebase`** should contain production database URLs (for taking snapshots):
+
+```
+DATABASE_URL=postgresql://user:pass@prod-host:5432/db
+F3_DATABASE_URL=postgresql://user:pass@prod-host:5432/db
+```
 
 ### Prerequisites
 
@@ -155,17 +167,17 @@ The workflow uses separate environment variables for deployed vs local databases
 ### Workflow
 
 ```bash
-# Take snapshots from deployed databases (uses DATABASE_URL, F3_DATABASE_URL)
+# Take snapshots from production databases (reads from .env.firebase)
 npm run db:snapshot:all
 
 # Or snapshot individually
-npm run db:snapshot           # from DATABASE_URL
-npm run db:snapshot:f3prod    # from F3_DATABASE_URL
+npm run db:snapshot           # from DATABASE_URL in .env.firebase
+npm run db:snapshot:f3prod    # from F3_DATABASE_URL in .env.firebase
 
 # Start local PostgreSQL
 npm run db:local:up
 
-# Seed local databases (uses LOCAL_DATABASE_URL, LOCAL_F3_DATABASE_URL)
+# Seed local databases (reads from .env.local)
 npm run db:local:seed:all     # Both databases
 npm run db:local:seed         # f3auth_dev only
 npm run db:local:seed:f3prod  # f3prod_dev only

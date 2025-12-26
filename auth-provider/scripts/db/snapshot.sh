@@ -40,15 +40,31 @@ if [[ ! "$DB_TARGET" =~ ^(f3auth|f3prod|all)$ ]]; then
     exit 1
 fi
 
-# Load environment variables
+# Load specific environment variables safely (avoid sourcing entire file)
+load_env_var() {
+    local var_name="$1"
+    local env_file="$2"
+    local value
+    # Extract value, handling quotes properly
+    value=$(grep "^${var_name}=" "$env_file" 2>/dev/null | head -1 | cut -d'=' -f2-)
+    # Remove surrounding quotes if present
+    value="${value%\"}"
+    value="${value#\"}"
+    value="${value%\'}"
+    value="${value#\'}"
+    echo "$value"
+}
+
+ENV_FILE=""
 if [[ -f "$PROJECT_DIR/.env.local" ]]; then
-    set -a
-    source "$PROJECT_DIR/.env.local"
-    set +a
+    ENV_FILE="$PROJECT_DIR/.env.local"
 elif [[ -f "$PROJECT_DIR/.env" ]]; then
-    set -a
-    source "$PROJECT_DIR/.env"
-    set +a
+    ENV_FILE="$PROJECT_DIR/.env"
+fi
+
+if [[ -n "$ENV_FILE" ]]; then
+    [[ -z "${DATABASE_URL:-}" ]] && DATABASE_URL=$(load_env_var "DATABASE_URL" "$ENV_FILE")
+    [[ -z "${F3_DATABASE_URL:-}" ]] && F3_DATABASE_URL=$(load_env_var "F3_DATABASE_URL" "$ENV_FILE")
 fi
 
 # Check for pg_dump

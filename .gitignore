@@ -1,2 +1,6 @@
 pr.md
 plans
+
+# Environment files with secrets
+.env.prod
+.env.staging

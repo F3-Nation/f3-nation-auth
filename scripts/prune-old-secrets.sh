@@ -5,11 +5,19 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Base secret names (without environment prefix)
+BASE_PROVIDER_SECRETS=("provider-database-url" "provider-nextauth-secret" "provider-nextauth-url" "provider-next-public-nextauth-url" "provider-twilio-sendgrid-api-key" "provider-twilio-sendgrid-template-id" "provider-email-verification-sender" "provider-node-env" "provider-allowed-origins")
+BASE_CLIENT_SECRETS=("client-nextauth-secret" "client-nextauth-url" "client-next-public-nextauth-url" "client-oauth-client-id" "client-oauth-client-secret" "client-oauth-redirect-uri" "client-auth-provider-url")
+
+# Environment prefixes
+ENV_PREFIXES=("" "staging-")
+
 DEFAULT_APPS=("auth-provider" "auth-client")
 
 DRY_RUN=false
 KEEP_VERSIONS=1
 declare -a SELECTED_APPS=()
+SELECTED_ENV=""
 
 TOTAL_VERSIONS_PRUNED=0
 LAST_PRUNED_COUNT=0
@@ -24,12 +32,14 @@ Options:
   --dry-run           Only log the destroy commands; do not delete anything
   --keep <count>      Number of newest versions to keep for each secret (default: 1)
   --app <name>        Limit pruning to a specific app (can be provided multiple times)
+  --env <name>        Limit pruning to a specific environment (prod or staging)
   -h, --help          Show this help message
 
 Examples:
   scripts/prune-old-secrets.sh
   scripts/prune-old-secrets.sh --dry-run
   scripts/prune-old-secrets.sh --keep 2 --app auth-provider
+  scripts/prune-old-secrets.sh --env staging --app auth-provider
 EOF
 }
 
@@ -59,33 +69,6 @@ require_command() {
     log_error "Required command '$cmd' not found in PATH"
     exit 1
   fi
-}
-
-extract_project_id() {
-  local file="$1"
-  local project_id
-  project_id="$(grep -E 'local[[:space:]]+project_id=' "$file" | head -n1 | sed -E 's/.*local[[:space:]]+project_id="([^"]+)".*/\1/')"
-  if [[ -z "${project_id:-}" ]]; then
-    log_warning "Could not infer project_id from $file"
-    return 1
-  fi
-  echo "$project_id"
-}
-
-SECRET_IDS_ARRAY=()
-extract_secret_ids() {
-  local file="$1"
-  local array_line
-  array_line="$(grep -E '^SECRET_IDS=\(' "$file" | head -n1 | tr -d '\r')"
-  if [[ -z "${array_line:-}" ]]; then
-    log_warning "Could not find SECRET_IDS array in $file"
-    return 1
-  fi
-
-  local sanitized="${array_line#SECRET_IDS=}"
-  local parsed=()
-  eval "parsed=$sanitized"
-  SECRET_IDS_ARRAY=("${parsed[@]}")
 }
 
 validate_keep_value() {
@@ -124,6 +107,18 @@ parse_args() {
         SELECTED_APPS+=("$2")
         shift 2
         ;;
+      --env)
+        if [[ $# -lt 2 ]]; then
+          log_error "--env requires a value (prod or staging)"
+          exit 1
+        fi
+        if [[ "$2" != "prod" && "$2" != "staging" ]]; then
+          log_error "--env must be 'prod' or 'staging' (received '$2')"
+          exit 1
+        fi
+        SELECTED_ENV="$2"
+        shift 2
+        ;;
       -h|--help)
         usage
         exit 0
@@ -138,10 +133,9 @@ parse_args() {
 }
 
 prune_secret_versions() {
-  local app="$1"
-  local project_id="$2"
-  local secret_id="$3"
-  local keep="$4"
+  local project_id="$1"
+  local secret_id="$2"
+  local keep="$3"
 
   LAST_PRUNED_COUNT=0
 
@@ -200,41 +194,78 @@ prune_secret_versions() {
   LAST_PRUNED_COUNT=$pruned
 }
 
+get_secret_ids_for_app() {
+  local app="$1"
+
+  if [[ "$app" == "auth-provider" ]]; then
+    echo "${BASE_PROVIDER_SECRETS[@]}"
+  elif [[ "$app" == "auth-client" ]]; then
+    echo "${BASE_CLIENT_SECRETS[@]}"
+  else
+    log_warning "Unknown app '$app'; no secrets defined"
+    echo ""
+  fi
+}
+
+get_prefixes_to_process() {
+  if [[ -n "$SELECTED_ENV" ]]; then
+    if [[ "$SELECTED_ENV" == "prod" ]]; then
+      echo ""
+    else
+      echo "staging-"
+    fi
+  else
+    echo "${ENV_PREFIXES[@]}"
+  fi
+}
+
 process_app() {
   local app="$1"
-  local script_path="$REPO_ROOT/$app/scripts/firebase-secrets.sh"
+  local project_id="f3-nation-auth"
 
-  if [[ ! -f "$script_path" ]]; then
-    log_warning "Skipping app '$app' (missing $script_path)"
+  # Get base secret IDs for this app
+  local base_secrets_str
+  base_secrets_str=$(get_secret_ids_for_app "$app")
+
+  if [[ -z "$base_secrets_str" ]]; then
+    log_warning "No secrets defined for app '$app'; skipping"
     return
   fi
 
-  local project_id
-  if ! project_id="$(extract_project_id "$script_path")"; then
-    log_warning "Skipping app '$app' (unable to determine project ID)"
-    return
-  fi
+  read -ra BASE_SECRETS <<< "$base_secrets_str"
 
-  SECRET_IDS_ARRAY=()
-  if ! extract_secret_ids "$script_path"; then
-    log_warning "Skipping app '$app' (unable to parse SECRET_IDS)"
-    return
-  fi
-
-  if [[ ${#SECRET_IDS_ARRAY[@]} -eq 0 ]]; then
-    log_warning "No secret IDs defined for app '$app'; skipping"
-    return
-  fi
+  # Get prefixes to process
+  local prefixes_str
+  prefixes_str=$(get_prefixes_to_process)
+  read -ra PREFIXES <<< "$prefixes_str"
 
   log_step "Processing app '$app' (project: $project_id)"
 
   local app_pruned=0
-  for secret_id in "${SECRET_IDS_ARRAY[@]}"; do
-    prune_secret_versions "$app" "$project_id" "$secret_id" "$KEEP_VERSIONS"
-    if (( LAST_PRUNED_COUNT > 0 )); then
-      app_pruned=$((app_pruned + LAST_PRUNED_COUNT))
-      TOTAL_VERSIONS_PRUNED=$((TOTAL_VERSIONS_PRUNED + LAST_PRUNED_COUNT))
+
+  for prefix in "${PREFIXES[@]}"; do
+    local env_name="prod"
+    if [[ -n "$prefix" ]]; then
+      env_name="${prefix%-}"  # Remove trailing dash
     fi
+
+    log_info "Processing $env_name environment secrets..."
+
+    for base_secret in "${BASE_SECRETS[@]}"; do
+      local secret_id="${prefix}${base_secret}"
+
+      # Check if secret exists before trying to prune
+      if ! gcloud secrets describe "$secret_id" --project="$project_id" --quiet &>/dev/null; then
+        log_info "Secret '$secret_id' does not exist; skipping"
+        continue
+      fi
+
+      prune_secret_versions "$project_id" "$secret_id" "$KEEP_VERSIONS"
+      if (( LAST_PRUNED_COUNT > 0 )); then
+        app_pruned=$((app_pruned + LAST_PRUNED_COUNT))
+        TOTAL_VERSIONS_PRUNED=$((TOTAL_VERSIONS_PRUNED + LAST_PRUNED_COUNT))
+      fi
+    done
   done
 
   if (( app_pruned > 0 )); then
@@ -260,6 +291,10 @@ main() {
 
   if [[ "$DRY_RUN" == true ]]; then
     log_info "Running in dry-run mode; no secrets will be destroyed"
+  fi
+
+  if [[ -n "$SELECTED_ENV" ]]; then
+    log_info "Filtering to environment: $SELECTED_ENV"
   fi
 
   for app in "${SELECTED_APPS[@]}"; do

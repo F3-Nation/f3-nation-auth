@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 import * as schema from './schema';
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.F3_DATABASE_URL,
 });
 
 // Use drizzle to wrap the PG pool with schema types

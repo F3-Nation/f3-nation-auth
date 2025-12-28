@@ -21,6 +21,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Create auth schema for auth-related tables
+CREATE SCHEMA IF NOT EXISTS auth;
+GRANT ALL ON SCHEMA auth TO f3prod;
+
 -- Also add citext to the main database for consistency
 \c f3auth_dev
 CREATE EXTENSION IF NOT EXISTS citext;

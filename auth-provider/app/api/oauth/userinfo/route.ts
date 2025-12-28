@@ -5,7 +5,7 @@ import { oauthClients } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 interface TokenData {
-  userId: string;
+  userId: number;
   clientId: string;
   scopes: string[];
 }

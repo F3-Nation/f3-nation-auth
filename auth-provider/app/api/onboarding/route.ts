@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/db';
-import { users } from '@/db/schema';
+import { users, userProfiles } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
@@ -23,16 +23,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Hospital name is required' }, { status: 400 });
     }
 
-    // Update the user's names and mark onboarding as completed
+    // Update the user's F3 name in public.users
     await db
       .update(users)
       .set({
-        name: f3Name.trim(), // Sync with f3Name for NextAuth compatibility
         f3Name: f3Name.trim(),
-        hospitalName: hospitalName.trim(),
-        onboardingCompleted: true,
+        updated: new Date(),
       })
       .where(eq(users.id, session.user.id));
+
+    // Update or create user profile in auth.user_profiles
+    const existingProfile = await db
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, session.user.id))
+      .limit(1);
+
+    if (existingProfile.length > 0) {
+      await db
+        .update(userProfiles)
+        .set({
+          hospitalName: hospitalName.trim(),
+          onboardingCompleted: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(userProfiles.userId, session.user.id));
+    } else {
+      await db.insert(userProfiles).values({
+        userId: session.user.id,
+        hospitalName: hospitalName.trim(),
+        onboardingCompleted: true,
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

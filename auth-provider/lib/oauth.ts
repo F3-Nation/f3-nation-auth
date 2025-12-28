@@ -118,7 +118,7 @@ export function validateScopes(client: OAuthClient, requestedScopes: string[]): 
 // Create authorization code
 export async function createAuthorizationCode(
   clientId: string,
-  userId: string,
+  userId: number,
   redirectUri: string,
   scopes: string[],
   codeChallenge?: string,
@@ -147,7 +147,7 @@ export async function validateAuthorizationCode(
   clientId: string,
   redirectUri: string,
   codeVerifier?: string
-): Promise<{ userId: string; scopes: string[] } | null> {
+): Promise<{ userId: number; scopes: string[] } | null> {
   const authCode = await db
     .select()
     .from(oauthAuthorizationCodes)
@@ -193,7 +193,7 @@ export async function validateAuthorizationCode(
 // Create access token
 export async function createAccessToken(
   clientId: string,
-  userId: string,
+  userId: number,
   scopes: string[]
 ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
   const accessToken = generateSecureToken();
@@ -226,7 +226,7 @@ export async function createAccessToken(
 // Validate access token
 export async function validateAccessToken(
   token: string
-): Promise<{ userId: string; scopes: string[]; clientId: string } | null> {
+): Promise<{ userId: number; scopes: string[]; clientId: string } | null> {
   const accessToken = await db
     .select()
     .from(oauthAccessTokens)
@@ -284,17 +284,17 @@ export async function refreshAccessToken(
 }
 
 // Get user info for token
-export async function getUserInfo(userId: string, scopes: string[]) {
+export async function getUserInfo(userId: number, scopes: string[]) {
   const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
 
   if (!user.length) return null;
 
   const userData = user[0];
-  const userInfo: Record<string, unknown> = { sub: userId };
+  const userInfo: Record<string, unknown> = { sub: String(userId) };
 
   if (scopes.includes('profile')) {
     userInfo.name = userData.f3Name;
-    userInfo.picture = userData.image;
+    userInfo.picture = userData.avatarUrl;
   }
 
   if (scopes.includes('email')) {

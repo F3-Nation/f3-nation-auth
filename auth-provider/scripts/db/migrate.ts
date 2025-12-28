@@ -32,6 +32,7 @@ const SKIP_PATTERNS = [
   /^-- NOTE:/i,
   /^-- Sync the users_id_seq/i,
   /^SELECT setval\('public\.users_id_seq'/i, // Can't modify public schema sequences
+  /REFERENCES "public"\."users"/i, // Can't create FK to public.users without REFERENCES permission
 ];
 
 async function main() {

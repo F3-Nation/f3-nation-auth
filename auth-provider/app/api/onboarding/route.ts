@@ -23,11 +23,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Hospital name is required' }, { status: 400 });
     }
 
-    // Update the user's F3 name in public.users
+    // Parse hospital name into first/last name for public.users
+    const words = hospitalName.trim().split(/\s+/);
+    const lastName = words.pop() || '';
+    const firstName = words.join(' ');
+
+    // Update the user's F3 name and first/last name in public.users
     await db
       .update(users)
       .set({
         f3Name: f3Name.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         updated: new Date(),
       })
       .where(eq(users.id, session.user.id));

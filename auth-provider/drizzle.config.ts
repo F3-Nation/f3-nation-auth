@@ -9,7 +9,7 @@ export default {
   out: './drizzle', // Directory to store migration files
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.F3_DATABASE_URL || '',
+    url: process.env.DATABASE_URL || '',
   },
   schemaFilter: ['auth'], // Only manage auth schema, not public
   tablesFilter: ['!users'], // Exclude the external public.users table

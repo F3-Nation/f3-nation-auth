@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 import * as schema from './schema';
 
 const pool = new Pool({
-  connectionString: process.env.F3_DATABASE_URL,
+  connectionString: process.env.DATABASE_URL,
 });
 
 // Use drizzle to wrap the PG pool with schema types

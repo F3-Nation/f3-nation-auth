@@ -10,7 +10,7 @@ Before testing, ensure:
 
 - [ ] Fresh local database initialized (`docker compose down -v && docker compose up -d`)
 - [ ] Migration has been run (`npm run db:push` or `npm run db:migrate`)
-- [ ] `F3_DATABASE_URL` environment variable is configured
+- [ ] `DATABASE_URL` environment variable is configured
 - [ ] App is running locally (`npm run dev`)
 
 ---

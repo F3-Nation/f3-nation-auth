@@ -1,4 +1,6 @@
-# Migration Plan: DATABASE_URL to F3_DATABASE_URL
+# Migration Plan: Auth App to F3 Production Database
+
+**STATUS: COMPLETE**
 
 ## Overview
 
@@ -6,7 +8,7 @@ Migrate auth app from isolated user table (text IDs) to F3 production's `public.
 
 ## Key Changes Summary
 
-- **Database connection**: `DATABASE_URL` → `F3_DATABASE_URL`
+- **Database connection**: Uses `DATABASE_URL` (pointing to f3prod database)
 - **User table**: Use existing `public.users` (integer IDs) instead of `user` (text IDs)
 - **Auth tables**: Move to `auth.*` namespace (auth.sessions, auth.oauth_clients, etc.)
 - **New table**: `auth.user_profiles` for auth-specific fields (hospitalName, onboardingCompleted)
@@ -84,7 +86,7 @@ export default {
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.F3_DATABASE_URL || "",
+    url: process.env.DATABASE_URL || "",
   },
   schemaFilter: ["auth"], // Only manage auth schema, not public
 } satisfies Config;
@@ -94,7 +96,7 @@ export default {
 
 ```typescript
 const pool = new Pool({
-  connectionString: process.env.F3_DATABASE_URL, // Changed from DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
 });
 ```
 
@@ -226,8 +228,8 @@ Ensure test data creates users in `public.users` and profiles in `auth.user_prof
 | ---------------------------------- | ------------------------------------------------------- |
 | `db/external/users.ts`             | NEW - public.users schema (read-only definition)        |
 | `db/schema.ts`                     | REWRITE - auth.\* namespace, integer FKs, user_profiles |
-| `db/index.ts`                      | Change DATABASE_URL → F3_DATABASE_URL                   |
-| `drizzle.config.ts`                | Add schemaFilter: ['auth'], use F3_DATABASE_URL         |
+| `db/index.ts`                      | Use DATABASE_URL (pointing to f3prod)                   |
+| `drizzle.config.ts`                | Add schemaFilter: ['auth'], use DATABASE_URL            |
 | `lib/auth.ts`                      | User ID string→number, split user/profile logic         |
 | `lib/oauth.ts`                     | userId type string→number in all functions              |
 | `app/api/onboarding/route.ts`      | Write to users + user_profiles                          |

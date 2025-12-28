@@ -129,7 +129,33 @@ npm run db:seed
 
 ## Local Development Database
 
-Run a local PostgreSQL instance with Docker for development without affecting staging/production.
+Run a local PostgreSQL instance with Docker for development without affecting staging/production. The local setup includes two databases:
+
+- **f3auth_dev** - Auth provider database (`DATABASE_URL` in `.env.local`)
+- **f3prod_dev** - F3 production data database (`F3_DATABASE_URL` in `.env.local`)
+
+### Environment Files
+
+The workflow uses two environment files to separate concerns:
+
+| File            | Purpose                                  | Used By                                  |
+| --------------- | ---------------------------------------- | ---------------------------------------- |
+| `.env.firebase` | Production database URLs for snapshots   | `npm run db:snapshot:*`                  |
+| `.env.local`    | Local development databases & app config | `npm run dev`, `npm run db:local:seed:*` |
+
+**`.env.local`** should contain local database URLs:
+
+```
+DATABASE_URL=postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev
+F3_DATABASE_URL=postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev
+```
+
+**`.env.firebase`** should contain production database URLs (for taking snapshots):
+
+```
+DATABASE_URL=postgresql://user:pass@prod-host:5432/db
+F3_DATABASE_URL=postgresql://user:pass@prod-host:5432/db
+```
 
 ### Prerequisites
 
@@ -141,17 +167,20 @@ Run a local PostgreSQL instance with Docker for development without affecting st
 ### Workflow
 
 ```bash
-# Take snapshot from staging/production
-npm run db:snapshot
+# Take snapshots from production databases (reads from .env.firebase)
+npm run db:snapshot:all
+
+# Or snapshot individually
+npm run db:snapshot           # from DATABASE_URL in .env.firebase
+npm run db:snapshot:f3prod    # from F3_DATABASE_URL in .env.firebase
 
 # Start local PostgreSQL
 npm run db:local:up
 
-# Seed from snapshot
-npm run db:local:seed
-
-# Update .env.local to use local database:
-# DATABASE_URL=postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev
+# Seed local databases (reads from .env.local)
+npm run db:local:seed:all     # Both databases
+npm run db:local:seed         # f3auth_dev only
+npm run db:local:seed:f3prod  # f3prod_dev only
 
 # Run dev server
 npm run dev
@@ -162,32 +191,36 @@ npm run db:local:down
 
 ### Available Commands
 
-| Command                      | Description                                             |
-| ---------------------------- | ------------------------------------------------------- |
-| `npm run db:snapshot`        | Pull full snapshot (schema + data) from remote database |
-| `npm run db:snapshot:schema` | Pull schema only                                        |
-| `npm run db:snapshot:data`   | Pull data only                                          |
-| `npm run db:local:up`        | Start local PostgreSQL container                        |
-| `npm run db:local:down`      | Stop container (preserves data)                         |
-| `npm run db:local:seed`      | Seed local database from latest snapshot                |
-| `npm run db:local:reset`     | Full reset: stop, remove data, start, seed              |
+| Command                         | Description                                    |
+| ------------------------------- | ---------------------------------------------- |
+| `npm run db:snapshot`           | Snapshot from DATABASE_URL                     |
+| `npm run db:snapshot:schema`    | Schema only from DATABASE_URL                  |
+| `npm run db:snapshot:data`      | Data only from DATABASE_URL                    |
+| `npm run db:snapshot:f3prod`    | Snapshot from F3_DATABASE_URL                  |
+| `npm run db:snapshot:all`       | Snapshot both deployed databases               |
+| `npm run db:local:up`           | Start local PostgreSQL container               |
+| `npm run db:local:down`         | Stop container (preserves data)                |
+| `npm run db:local:seed`         | Seed f3auth_dev from latest snapshot           |
+| `npm run db:local:seed:f3prod`  | Seed f3prod_dev from latest snapshot           |
+| `npm run db:local:seed:all`     | Seed both local databases                      |
+| `npm run db:local:reset`        | Full reset: stop, remove data, start, seed all |
+| `npm run db:local:reset:f3auth` | Reset and seed f3auth_dev only                 |
+| `npm run db:local:reset:f3prod` | Reset and seed f3prod_dev only                 |
 
 ### Connection Details
 
-| Property          | Value                                                            |
-| ----------------- | ---------------------------------------------------------------- |
-| Host              | localhost                                                        |
-| Port              | 5433                                                             |
-| User              | f3auth                                                           |
-| Password          | f3auth_local_dev                                                 |
-| Database          | f3auth_dev                                                       |
-| Connection String | `postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev` |
+| Database   | User   | Password         | Connection String                                                |
+| ---------- | ------ | ---------------- | ---------------------------------------------------------------- |
+| f3auth_dev | f3auth | f3auth_local_dev | `postgresql://f3auth:f3auth_local_dev@localhost:5433/f3auth_dev` |
+| f3prod_dev | f3prod | f3prod_local_dev | `postgresql://f3prod:f3prod_local_dev@localhost:5433/f3prod_dev` |
 
 ### Notes
 
-- Snapshots include all tables (sessions, tokens, etc.) for complete debugging
-- Don't share snapshots externally as they contain auth data
-- The `--remove-data` flag on `db:local:down` removes the Docker volume
+- Snapshots are stored in `db-snapshots/<database>/<timestamp>/`
+- Both databases run in the same PostgreSQL container on port 5433
+- Don't share snapshots externally as they contain auth and production data
+- Use `npm run db:local:down --remove-data` to completely reset the Docker volume
+- After removing data, run `npm run db:local:reset` to reinitialize both databases
 
 ## Authentication Flow
 

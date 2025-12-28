@@ -13,6 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
+    "db:deploy": "npx tsx scripts/db/migrate.ts",
     "firebase:secrets": "scripts/firebase-secrets.sh",
     "db:snapshot": "scripts/db/snapshot.sh",
     "db:local:up": "scripts/db/local/up.sh",
@@ -45,6 +46,7 @@
     "eslint": "9.32.0",
     "eslint-config-next": "15.4.5",
     "prettier": "^3.6.2",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

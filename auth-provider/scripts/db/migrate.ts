@@ -122,7 +122,8 @@ async function applyMigration(client: import('pg').PoolClient, name: string, sql
   await client.query('BEGIN');
 
   try {
-    for (const stmt of statements) {
+    for (let i = 0; i < statements.length; i++) {
+      const stmt = statements[i];
       // Check if we should skip this statement
       const shouldSkip = SKIP_PATTERNS.some(pattern => pattern.test(stmt));
 
@@ -131,15 +132,20 @@ async function applyMigration(client: import('pg').PoolClient, name: string, sql
         continue;
       }
 
-      // Execute the statement
+      // Use savepoint so we can recover from "already exists" errors
+      const savepointName = `sp_${i}`;
+      await client.query(`SAVEPOINT ${savepointName}`);
+
       try {
         await client.query(stmt);
+        await client.query(`RELEASE SAVEPOINT ${savepointName}`);
       } catch (err) {
-        // Handle "already exists" errors gracefully (for idempotency)
         const pgErr = err as { code?: string; message?: string };
-        if (pgErr.code === '42P07' || pgErr.code === '42710') {
-          // 42P07 = duplicate_table, 42710 = duplicate_object
+        // Handle "already exists" errors gracefully (for idempotency)
+        // 42P07 = duplicate_table, 42710 = duplicate_object, 42P16 = duplicate constraint
+        if (pgErr.code === '42P07' || pgErr.code === '42710' || pgErr.code === '42P16') {
           console.log(`   ⚠️  Already exists, continuing: ${stmt.substring(0, 50)}...`);
+          await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
         } else {
           throw err;
         }

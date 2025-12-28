@@ -132,11 +132,18 @@ function EmailVerifyContent() {
     setResendMessage(null);
     setIsResending(true);
     try {
-      const result = await signIn('email', {
-        email,
-        callbackUrl,
-        redirect: false,
-      });
+      let result;
+      try {
+        result = await signIn('email', {
+          email,
+          callbackUrl,
+          redirect: false,
+        });
+      } catch (signInError) {
+        // next-auth may throw when parsing response with undefined url
+        // This is expected when authorize returns null after sending verification email
+        console.log('SignIn threw (expected for email verification step):', signInError);
+      }
 
       if (result?.error && result.error !== 'CredentialsSignin') {
         setResendMessage({

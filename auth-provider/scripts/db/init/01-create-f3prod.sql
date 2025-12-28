@@ -25,6 +25,10 @@ $$ LANGUAGE plpgsql;
 CREATE SCHEMA IF NOT EXISTS auth;
 GRANT ALL ON SCHEMA auth TO f3prod;
 
+-- Reset the users_id_seq to continue after the max existing ID
+-- This prevents duplicate key conflicts when inserting new users
+SELECT setval('public.users_id_seq', COALESCE((SELECT MAX(id) FROM public.users), 0));
+
 -- Also add citext to the main database for consistency
 \c f3auth_dev
 CREATE EXTENSION IF NOT EXISTS citext;

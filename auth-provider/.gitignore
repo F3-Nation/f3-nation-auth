@@ -47,3 +47,5 @@ certificates
 
 # Database snapshots
 db-snapshots/
+
+users.json

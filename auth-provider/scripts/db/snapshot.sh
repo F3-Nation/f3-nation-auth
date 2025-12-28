@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Pull database snapshot from production databases defined in .env.firebase
+# Pull database snapshot from production database defined in .env.firebase
 # Usage: ./scripts/db/snapshot.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,16 +25,15 @@ load_env_var() {
     echo "$value"
 }
 
-# Load production database URLs from .env.firebase (source of truth for snapshots)
+# Load production database URL from .env.firebase (source of truth for snapshots)
 ENV_FILE="$PROJECT_DIR/.env.firebase"
 if [[ ! -f "$ENV_FILE" ]]; then
     echo "Error: .env.firebase not found at $ENV_FILE"
-    echo "This file should contain production DATABASE_URL and F3_DATABASE_URL"
+    echo "This file should contain production DATABASE_URL"
     exit 1
 fi
 
 [[ -z "${DATABASE_URL:-}" ]] && DATABASE_URL=$(load_env_var "DATABASE_URL" "$ENV_FILE")
-[[ -z "${F3_DATABASE_URL:-}" ]] && F3_DATABASE_URL=$(load_env_var "F3_DATABASE_URL" "$ENV_FILE")
 
 # Check for pg_dump
 if ! command -v pg_dump &> /dev/null; then
@@ -56,166 +55,142 @@ clean_db_url() {
     echo "$clean_url"
 }
 
-# Function to snapshot a single database
-snapshot_db() {
-    local db_name="$1"
-    local db_url_var="$2"
+# Get the URL from environment variable
+if [[ -z "${DATABASE_URL:-}" ]]; then
+    echo "Error: DATABASE_URL is not set"
+    echo "Please set it in .env.firebase"
+    exit 1
+fi
 
-    # Get the URL from environment variable
-    local db_url="${!db_url_var:-}"
-    if [[ -z "$db_url" ]]; then
-        echo "Error: $db_url_var is not set"
-        echo "Please set it in .env.firebase"
-        return 1
+clean_url=$(clean_db_url "$DATABASE_URL")
+
+# Create snapshot directory
+TIMESTAMP=$(date +%Y-%m-%d_%H%M%S)
+SNAPSHOT_DIR="$SNAPSHOTS_DIR/latest/$TIMESTAMP"
+mkdir -p "$SNAPSHOT_DIR"
+
+echo "Creating database snapshot..."
+echo "  Source: DATABASE_URL"
+echo "  Type: $DUMP_TYPE"
+echo "  Directory: $SNAPSHOT_DIR"
+
+# Dynamically discover auth_* tables plus users table from public schema
+dump_table_patterns="auth_% users"
+
+# Resolve table patterns to actual table names
+where_clauses=""
+for pattern in $dump_table_patterns; do
+    if [[ -n "$where_clauses" ]]; then
+        where_clauses="$where_clauses OR "
     fi
-
-    local clean_url=$(clean_db_url "$db_url")
-
-    # Create per-database snapshot directory
-    local DB_SNAPSHOTS_DIR="$SNAPSHOTS_DIR/$db_name"
-    local TIMESTAMP=$(date +%Y-%m-%d_%H%M%S)
-    local SNAPSHOT_DIR="$DB_SNAPSHOTS_DIR/$TIMESTAMP"
-    mkdir -p "$SNAPSHOT_DIR"
-
-    echo "Creating $db_name database snapshot..."
-    echo "  Source: $db_url_var"
-    echo "  Type: $DUMP_TYPE"
-    echo "  Directory: $SNAPSHOT_DIR"
-
-    # Determine what to dump based on database
-    # For f3prod: dynamically discover auth_* tables plus users table from public schema
-    local dump_tables=""
-    local dump_table_patterns=""
-    if [[ "$db_name" == "f3prod" ]]; then
-        # Will be resolved dynamically: all auth_* tables + users table
-        dump_table_patterns="auth_% users"
+    if [[ "$pattern" == *"%"* ]]; then
+        where_clauses="${where_clauses}tablename LIKE '$pattern'"
+    else
+        where_clauses="${where_clauses}tablename = '$pattern'"
     fi
+done
+dump_tables=$(psql "$clean_url" -t -c "SELECT 'public.' || tablename FROM pg_tables WHERE schemaname = 'public' AND ($where_clauses) ORDER BY tablename" 2>/dev/null | tr -d ' ' | grep -v '^$' | tr '\n' ' ')
+echo "  Tables to dump: $dump_tables"
 
-    # Resolve table patterns to actual table names
-    if [[ -n "$dump_table_patterns" ]]; then
-        local where_clauses=""
-        for pattern in $dump_table_patterns; do
-            if [[ -n "$where_clauses" ]]; then
-                where_clauses="$where_clauses OR "
-            fi
-            if [[ "$pattern" == *"%"* ]]; then
-                where_clauses="${where_clauses}tablename LIKE '$pattern'"
-            else
-                where_clauses="${where_clauses}tablename = '$pattern'"
-            fi
+# Dump schema
+if [[ "$DUMP_TYPE" == "full" || "$DUMP_TYPE" == "schema" ]]; then
+    echo "  Dumping schema..."
+    schema_args=()
+
+    if [[ -n "$dump_tables" ]]; then
+        # Dump specific tables only
+        for table in $dump_tables; do
+            schema_args+=(--table="$table")
         done
-        dump_tables=$(psql "$clean_url" -t -c "SELECT 'public.' || tablename FROM pg_tables WHERE schemaname = 'public' AND ($where_clauses) ORDER BY tablename" 2>/dev/null | tr -d ' ' | grep -v '^$' | tr '\n' ' ')
-        echo "  Tables to dump: $dump_tables"
+    else
+        # Dump entire public schema
+        schema_args+=(--schema=public)
     fi
 
-    # Dump schema
-    if [[ "$DUMP_TYPE" == "full" || "$DUMP_TYPE" == "schema" ]]; then
-        echo "  Dumping schema..."
-        local schema_args=()
+    pg_dump "$clean_url" \
+        --schema-only \
+        --no-owner \
+        --no-privileges \
+        --no-comments \
+        "${schema_args[@]}" \
+        > "$SNAPSHOT_DIR/schema.sql" 2>/dev/null
+    echo "    Created schema.sql ($(wc -c < "$SNAPSHOT_DIR/schema.sql" | tr -d ' ') bytes)"
+fi
 
-        if [[ -n "$dump_tables" ]]; then
-            # Dump specific tables only
-            for table in $dump_tables; do
-                schema_args+=(--table="$table")
-            done
-        else
-            # Dump entire public schema
-            schema_args+=(--schema=public)
-        fi
+# Dump data
+if [[ "$DUMP_TYPE" == "full" || "$DUMP_TYPE" == "data" ]]; then
+    echo "  Dumping data..."
 
+    if [[ -n "$dump_tables" ]]; then
+        # For specific tables: try pg_dump first, fall back to CSV export
+        table_args=()
+        for table in $dump_tables; do
+            table_args+=(--table="$table")
+        done
+
+        stderr_file="$SNAPSHOT_DIR/.dump_stderr"
+        # Allow pg_dump to fail - we'll check stderr and use fallback
         pg_dump "$clean_url" \
-            --schema-only \
+            --data-only \
             --no-owner \
             --no-privileges \
-            --no-comments \
-            "${schema_args[@]}" \
-            > "$SNAPSHOT_DIR/schema.sql" 2>/dev/null
-        echo "    Created schema.sql ($(wc -c < "$SNAPSHOT_DIR/schema.sql" | tr -d ' ') bytes)"
-    fi
+            --inserts \
+            "${table_args[@]}" \
+            > "$SNAPSHOT_DIR/data.sql" 2> "$stderr_file" || true
 
-    # Dump data
-    if [[ "$DUMP_TYPE" == "full" || "$DUMP_TYPE" == "data" ]]; then
-        echo "  Dumping data..."
+        if grep -q "permission denied for sequence" "$stderr_file" 2>/dev/null; then
+            echo "    pg_dump failed (sequence permissions), using CSV fallback..."
+            rm -f "$SNAPSHOT_DIR/data.sql"
+            mkdir -p "$SNAPSHOT_DIR/csv"
 
-        if [[ -n "$dump_tables" ]]; then
-            # For specific tables: try pg_dump first, fall back to CSV export
-            local table_args=()
+            # Export each table as CSV
             for table in $dump_tables; do
-                table_args+=(--table="$table")
+                csv_file="$SNAPSHOT_DIR/csv/${table//\./_}.csv"
+                psql "$clean_url" -c "COPY $table TO STDOUT WITH (FORMAT CSV, HEADER)" > "$csv_file" 2>/dev/null
+                row_count=$(( $(wc -l < "$csv_file" | tr -d ' ') - 1 ))
+                echo "    Exported $table ($row_count rows)"
             done
 
-            local stderr_file="$SNAPSHOT_DIR/.dump_stderr"
-            # Allow pg_dump to fail - we'll check stderr and use fallback
-            pg_dump "$clean_url" \
-                --data-only \
-                --no-owner \
-                --no-privileges \
-                --inserts \
-                "${table_args[@]}" \
-                > "$SNAPSHOT_DIR/data.sql" 2> "$stderr_file" || true
-
-            if grep -q "permission denied for sequence" "$stderr_file" 2>/dev/null; then
-                echo "    pg_dump failed (sequence permissions), using CSV fallback..."
-                rm -f "$SNAPSHOT_DIR/data.sql"
-                mkdir -p "$SNAPSHOT_DIR/csv"
-
-                # Export each table as CSV
-                for table in $dump_tables; do
-                    local csv_file="$SNAPSHOT_DIR/csv/${table//\./_}.csv"
-                    psql "$clean_url" -c "COPY $table TO STDOUT WITH (FORMAT CSV, HEADER)" > "$csv_file" 2>/dev/null
-                    local row_count=$(( $(wc -l < "$csv_file" | tr -d ' ') - 1 ))
-                    echo "    Exported $table ($row_count rows)"
-                done
-
-                # Create a load script
-                cat > "$SNAPSHOT_DIR/data.sql" << 'LOADER'
+            # Create a load script
+            cat > "$SNAPSHOT_DIR/data.sql" << 'LOADER'
 -- Data exported as CSV files in csv/ subdirectory
 -- This file is a placeholder - use the seed script to load CSV data
 -- CSV files: csv/*.csv
 LOADER
-            fi
-            rm -f "$stderr_file"
-        else
-            # For full schema dump: use pg_dump
-            pg_dump "$clean_url" \
-                --data-only \
-                --no-owner \
-                --no-privileges \
-                --inserts \
-                --schema=public \
-                > "$SNAPSHOT_DIR/data.sql" 2>/dev/null
         fi
-
-        echo "    Created data.sql ($(wc -c < "$SNAPSHOT_DIR/data.sql" | tr -d ' ') bytes)"
+        rm -f "$stderr_file"
+    else
+        # For full schema dump: use pg_dump
+        pg_dump "$clean_url" \
+            --data-only \
+            --no-owner \
+            --no-privileges \
+            --inserts \
+            --schema=public \
+            > "$SNAPSHOT_DIR/data.sql" 2>/dev/null
     fi
 
-    # Create metadata
-    cat > "$SNAPSHOT_DIR/metadata.json" << EOF
+    echo "    Created data.sql ($(wc -c < "$SNAPSHOT_DIR/data.sql" | tr -d ' ') bytes)"
+fi
+
+# Create metadata
+cat > "$SNAPSHOT_DIR/metadata.json" << EOF
 {
   "timestamp": "$TIMESTAMP",
   "type": "$DUMP_TYPE",
-  "database": "$db_name",
-  "source_var": "$db_url_var",
+  "database": "f3prod",
+  "source_var": "DATABASE_URL",
   "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 EOF
-    echo "  Created metadata.json"
+echo "  Created metadata.json"
 
-    # Update per-database latest symlink
-    rm -f "$DB_SNAPSHOTS_DIR/latest"
-    ln -s "$TIMESTAMP" "$DB_SNAPSHOTS_DIR/latest"
-    echo "  Updated 'latest' symlink"
+# Update latest symlink
+rm -f "$SNAPSHOTS_DIR/latest/current"
+ln -s "$TIMESTAMP" "$SNAPSHOTS_DIR/latest/current"
+echo "  Updated 'current' symlink"
 
-    echo ""
-    echo "Snapshot complete: $SNAPSHOT_DIR"
-}
-
-# Snapshot both databases
-echo "Snapshotting all databases..."
 echo ""
-snapshot_db "f3auth" "DATABASE_URL"
-echo ""
-snapshot_db "f3prod" "F3_DATABASE_URL"
-
+echo "Snapshot complete: $SNAPSHOT_DIR"
 echo ""
 echo "Use 'npm run db:local:seed' to load into local database"

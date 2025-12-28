@@ -11,4 +11,6 @@ export default {
   dbCredentials: {
     url: process.env.DATABASE_URL || '',
   },
+  schemaFilter: ['auth'], // Only manage auth schema, not public
+  tablesFilter: ['!users'], // Exclude the external public.users table
 } satisfies Config;

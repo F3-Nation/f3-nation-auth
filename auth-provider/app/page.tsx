@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import ThemeImage from './components/ThemeImage';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/db';
-import { users } from '@/db/schema';
+import { users, userProfiles } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import SignOutButton from './components/SignOutButton';
 
@@ -11,7 +11,7 @@ interface User {
   name: string;
   email: string;
   image: string;
-  id: string;
+  id: number;
 }
 
 interface Session {
@@ -30,18 +30,28 @@ export default async function Home({ searchParams }: PageProps) {
     redirect('/login?callbackUrl=/');
   }
 
-  // Check if user has completed onboarding and get F3 name and hospital name
+  // Get user data from public.users
   const userResult = await db
     .select({
-      onboardingCompleted: users.onboardingCompleted,
       f3Name: users.f3Name,
-      hospitalName: users.hospitalName,
     })
     .from(users)
     .where(eq(users.id, session.user.id))
     .limit(1);
 
-  const user = userResult[0];
+  const userData = userResult[0];
+
+  // Get profile data from auth.user_profiles
+  const profileResult = await db
+    .select({
+      onboardingCompleted: userProfiles.onboardingCompleted,
+      hospitalName: userProfiles.hospitalName,
+    })
+    .from(userProfiles)
+    .where(eq(userProfiles.userId, session.user.id))
+    .limit(1);
+
+  const profile = profileResult[0];
 
   // Preserve any OAuth callback parameters
   const callbackParams = new URLSearchParams();
@@ -53,7 +63,7 @@ export default async function Home({ searchParams }: PageProps) {
   const callbackQuery = callbackParams.toString();
   const callbackSuffix = callbackQuery ? `?${callbackQuery}` : '';
 
-  if (!user?.onboardingCompleted) {
+  if (!profile?.onboardingCompleted) {
     redirect(`/onboarding${callbackSuffix}`);
   }
 
@@ -103,8 +113,8 @@ export default async function Home({ searchParams }: PageProps) {
               priority
             />
           )}
-          <h1 className="text-2xl font-bold text-center">{user.f3Name}</h1>
-          <p className="text-lg font-semibold text-center">({user.hospitalName})</p>
+          <h1 className="text-2xl font-bold text-center">{userData?.f3Name}</h1>
+          <p className="text-lg font-semibold text-center">({profile?.hospitalName})</p>
           <p className="text-gray-600 text-center">{session.user.email}</p>
         </div>
         <SignOutButton />

@@ -1,76 +1,86 @@
 import { relations } from 'drizzle-orm/relations';
 import {
-  user,
-  session,
-  oauthClient,
-  oauthAuthorizationCode,
-  oauthAccessToken,
-  oauthRefreshToken,
-  account,
-} from './schema';
+  users,
+  userProfiles,
+  sessions,
+  oauthClients,
+  oauthAuthorizationCodes,
+  oauthAccessTokens,
+  oauthRefreshTokens,
+} from '../db/schema';
 
-export const sessionRelations = relations(session, ({ one }) => ({
-  user: one(user, {
-    fields: [session.userId],
-    references: [user.id],
+// User relations - users can have profiles and auth records
+export const usersRelations = relations(users, ({ one, many }) => ({
+  profile: one(userProfiles, {
+    fields: [users.id],
+    references: [userProfiles.userId],
+  }),
+  sessions: many(sessions),
+  oauthAuthorizationCodes: many(oauthAuthorizationCodes),
+  oauthAccessTokens: many(oauthAccessTokens),
+  oauthRefreshTokens: many(oauthRefreshTokens),
+}));
+
+// User profile relations
+export const userProfilesRelations = relations(userProfiles, ({ one }) => ({
+  user: one(users, {
+    fields: [userProfiles.userId],
+    references: [users.id],
   }),
 }));
 
-export const userRelations = relations(user, ({ many }) => ({
-  sessions: many(session),
-  oauthAuthorizationCodes: many(oauthAuthorizationCode),
-  oauthAccessTokens: many(oauthAccessToken),
-  oauthRefreshTokens: many(oauthRefreshToken),
-  accounts: many(account),
-}));
-
-export const oauthAuthorizationCodeRelations = relations(oauthAuthorizationCode, ({ one }) => ({
-  oauthClient: one(oauthClient, {
-    fields: [oauthAuthorizationCode.clientId],
-    references: [oauthClient.id],
-  }),
-  user: one(user, {
-    fields: [oauthAuthorizationCode.userId],
-    references: [user.id],
+// Session relations
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
   }),
 }));
 
-export const oauthClientRelations = relations(oauthClient, ({ many }) => ({
-  oauthAuthorizationCodes: many(oauthAuthorizationCode),
-  oauthAccessTokens: many(oauthAccessToken),
-  oauthRefreshTokens: many(oauthRefreshToken),
+// OAuth client relations
+export const oauthClientsRelations = relations(oauthClients, ({ many }) => ({
+  authorizationCodes: many(oauthAuthorizationCodes),
+  accessTokens: many(oauthAccessTokens),
+  refreshTokens: many(oauthRefreshTokens),
 }));
 
-export const oauthAccessTokenRelations = relations(oauthAccessToken, ({ one, many }) => ({
-  oauthClient: one(oauthClient, {
-    fields: [oauthAccessToken.clientId],
-    references: [oauthClient.id],
+// OAuth authorization code relations
+export const oauthAuthorizationCodesRelations = relations(oauthAuthorizationCodes, ({ one }) => ({
+  client: one(oauthClients, {
+    fields: [oauthAuthorizationCodes.clientId],
+    references: [oauthClients.id],
   }),
-  user: one(user, {
-    fields: [oauthAccessToken.userId],
-    references: [user.id],
-  }),
-  oauthRefreshTokens: many(oauthRefreshToken),
-}));
-
-export const oauthRefreshTokenRelations = relations(oauthRefreshToken, ({ one }) => ({
-  oauthAccessToken: one(oauthAccessToken, {
-    fields: [oauthRefreshToken.accessToken],
-    references: [oauthAccessToken.token],
-  }),
-  oauthClient: one(oauthClient, {
-    fields: [oauthRefreshToken.clientId],
-    references: [oauthClient.id],
-  }),
-  user: one(user, {
-    fields: [oauthRefreshToken.userId],
-    references: [user.id],
+  user: one(users, {
+    fields: [oauthAuthorizationCodes.userId],
+    references: [users.id],
   }),
 }));
 
-export const accountRelations = relations(account, ({ one }) => ({
-  user: one(user, {
-    fields: [account.userId],
-    references: [user.id],
+// OAuth access token relations
+export const oauthAccessTokensRelations = relations(oauthAccessTokens, ({ one, many }) => ({
+  client: one(oauthClients, {
+    fields: [oauthAccessTokens.clientId],
+    references: [oauthClients.id],
+  }),
+  user: one(users, {
+    fields: [oauthAccessTokens.userId],
+    references: [users.id],
+  }),
+  refreshTokens: many(oauthRefreshTokens),
+}));
+
+// OAuth refresh token relations
+export const oauthRefreshTokensRelations = relations(oauthRefreshTokens, ({ one }) => ({
+  accessToken: one(oauthAccessTokens, {
+    fields: [oauthRefreshTokens.accessToken],
+    references: [oauthAccessTokens.token],
+  }),
+  client: one(oauthClients, {
+    fields: [oauthRefreshTokens.clientId],
+    references: [oauthClients.id],
+  }),
+  user: one(users, {
+    fields: [oauthRefreshTokens.userId],
+    references: [users.id],
   }),
 }));

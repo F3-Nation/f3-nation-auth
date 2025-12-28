@@ -1,15 +1,15 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
-import { db, type DB } from '@/db';
+import { db, type DB, ensureSequenceSynced } from '@/db';
 import { createEmailVerification, verifyEmailCode } from './mfa';
-import { users } from '../db/schema';
+import { users, userProfiles } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 declare module 'next-auth' {
   interface Session {
     user: {
-      id: string;
+      id: number;
       name?: string | null;
       email?: string | null;
       image?: string | null;
@@ -20,13 +20,19 @@ declare module 'next-auth' {
   }
 
   interface User {
-    id: string;
+    id: number;
     name?: string | null;
     email?: string | null;
     image?: string | null;
     onboardingCompleted?: boolean;
     hospitalName?: string | null;
     f3Name?: string | null;
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id: number;
   }
 }
 
@@ -71,7 +77,7 @@ export const authOptions: NextAuthOptions = {
 
         console.log('Email verification successful for:', credentials.email);
 
-        // Create or find user in database
+        // Create or find user in database (public.users)
         try {
           const userResult = await db
             .select()
@@ -81,37 +87,56 @@ export const authOptions: NextAuthOptions = {
           let existingUser = userResult[0] || null;
 
           if (!existingUser) {
-            // Create new user if not exists
+            // Ensure the users_id_seq is synced before inserting
+            await ensureSequenceSynced();
+
+            // Create new user in public.users
             const f3Name = credentials.email!.split('@')[0];
-            const newUser = {
-              id: credentials.email!,
-              name: f3Name, // Sync with f3Name for NextAuth compatibility
-              f3Name: f3Name,
-              email: credentials.email!,
-              emailVerified: new Date(),
-              image: null,
-              onboardingCompleted: false,
-            };
-            const insertResult = await db.insert(users).values(newUser).returning();
+            const insertResult = await db
+              .insert(users)
+              .values({
+                f3Name: f3Name,
+                email: credentials.email!,
+                emailVerified: new Date(),
+                status: 'active',
+              })
+              .returning();
             existingUser = insertResult[0];
+
+            // Create user profile in auth.user_profiles
+            await db.insert(userProfiles).values({
+              userId: existingUser.id,
+              onboardingCompleted: false,
+            });
           } else {
             // User exists, update emailVerified timestamp
             await db
               .update(users)
               .set({
                 emailVerified: new Date(),
+                updated: new Date(),
               })
               .where(eq(users.id, existingUser.id));
           }
+
+          // Fetch user profile for onboarding status
+          const profileResult = await db
+            .select()
+            .from(userProfiles)
+            .where(eq(userProfiles.userId, existingUser.id))
+            .limit(1);
+          const profile = profileResult[0];
 
           console.log('Successfully found/created user:', existingUser);
           // Map database fields to NextAuth expected fields
           return {
             id: existingUser.id,
-            name: existingUser.name || existingUser.f3Name, // Use name field for NextAuth, fallback to f3Name
+            name: existingUser.f3Name,
             email: existingUser.email,
-            image: existingUser.image,
-            onboardingCompleted: existingUser.onboardingCompleted,
+            image: existingUser.avatarUrl,
+            onboardingCompleted: profile?.onboardingCompleted ?? false,
+            hospitalName: profile?.hospitalName,
+            f3Name: existingUser.f3Name,
           };
         } catch (dbError) {
           console.error('Database error:', dbError);
@@ -144,7 +169,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       // If user is provided (during sign in), add user info to token
       if (user) {
-        token.id = user.id;
+        token.id = user.id as number;
         token.name = user.name;
         token.email = user.email;
         token.image = user.image;
@@ -154,24 +179,35 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       // Send properties to the client
       if (token) {
-        session.user.id = token.id as string;
+        session.user.id = token.id as number;
         session.user.name = token.name as string | null;
         session.user.email = token.email as string | null;
         session.user.image = token.image as string | null;
 
-        // Fetch additional user data from database
+        // Fetch additional user data from database (join users + user_profiles)
         try {
           const userResult = await db
             .select()
             .from(users)
-            .where(eq(users.id, token.id as string))
+            .where(eq(users.id, token.id as number))
             .limit(1);
           const dbUser = userResult[0];
 
           if (dbUser) {
-            session.user.onboardingCompleted = dbUser.onboardingCompleted;
-            session.user.hospitalName = dbUser.hospitalName;
             session.user.f3Name = dbUser.f3Name;
+
+            // Fetch profile data
+            const profileResult = await db
+              .select()
+              .from(userProfiles)
+              .where(eq(userProfiles.userId, dbUser.id))
+              .limit(1);
+            const profile = profileResult[0];
+
+            if (profile) {
+              session.user.onboardingCompleted = profile.onboardingCompleted;
+              session.user.hospitalName = profile.hospitalName;
+            }
           }
         } catch (error) {
           console.error('Error fetching user data in session callback:', error);

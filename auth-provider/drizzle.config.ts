@@ -12,4 +12,5 @@ export default {
     url: process.env.F3_DATABASE_URL || '',
   },
   schemaFilter: ['auth'], // Only manage auth schema, not public
+  tablesFilter: ['!users'], // Exclude the external public.users table
 } satisfies Config;

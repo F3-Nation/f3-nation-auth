@@ -65,24 +65,8 @@ CREATE TABLE "auth"."user_profiles" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "users" (
-	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "users_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
-	"f3_name" text,
-	"first_name" text,
-	"last_name" text,
-	"email" text,
-	"phone" text,
-	"home_region_id" integer,
-	"avatar_url" text,
-	"meta" text,
-	"created" timestamp with time zone DEFAULT now(),
-	"updated" timestamp with time zone DEFAULT now(),
-	"emergency_contact" text,
-	"emergency_phone" text,
-	"emergency_notes" text,
-	"email_verified" timestamp with time zone,
-	"status" text DEFAULT 'active'
-);
+-- NOTE: public.users table is managed externally (F3 production database)
+-- It already exists and is NOT created by this migration
 --> statement-breakpoint
 CREATE TABLE "auth"."verification_tokens" (
 	"identifier" text NOT NULL,

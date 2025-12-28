@@ -85,4 +85,7 @@ ALTER TABLE "auth"."oauth_refresh_tokens" ADD CONSTRAINT "oauth_refresh_tokens_u
 ALTER TABLE "auth"."sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "auth"."user_profiles" ADD CONSTRAINT "user_profiles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "email_mfa_code_email_idx" ON "auth"."email_mfa_codes" USING btree ("email");--> statement-breakpoint
-CREATE INDEX "email_mfa_code_expires_idx" ON "auth"."email_mfa_codes" USING btree ("expires_at");
+CREATE INDEX "email_mfa_code_expires_idx" ON "auth"."email_mfa_codes" USING btree ("expires_at");--> statement-breakpoint
+-- Sync the users_id_seq to continue after the max existing ID
+-- This prevents duplicate key conflicts when inserting new users into the external public.users table
+SELECT setval('public.users_id_seq', COALESCE((SELECT MAX(id) FROM public.users), 0));

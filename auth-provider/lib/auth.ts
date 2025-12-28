@@ -1,7 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
-import { db, type DB } from '@/db';
+import { db, type DB, ensureSequenceSynced } from '@/db';
 import { createEmailVerification, verifyEmailCode } from './mfa';
 import { users, userProfiles } from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -87,6 +87,9 @@ export const authOptions: NextAuthOptions = {
           let existingUser = userResult[0] || null;
 
           if (!existingUser) {
+            // Ensure the users_id_seq is synced before inserting
+            await ensureSequenceSynced();
+
             // Create new user in public.users
             const f3Name = credentials.email!.split('@')[0];
             const insertResult = await db

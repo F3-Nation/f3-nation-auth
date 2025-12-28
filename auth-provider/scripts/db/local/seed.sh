@@ -2,33 +2,11 @@
 set -euo pipefail
 
 # Seed local PostgreSQL from snapshot using database URLs from .env.local
-# Usage: ./scripts/db/local/seed.sh [--db f3auth|f3prod|all] [snapshot-path]
+# Usage: ./scripts/db/local/seed.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
 SNAPSHOTS_DIR="$PROJECT_DIR/db-snapshots"
-
-# Parse arguments
-DB_TARGET="f3auth"
-SNAPSHOT_PATH=""
-
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --db)
-            DB_TARGET="$2"
-            shift 2
-            ;;
-        *)
-            SNAPSHOT_PATH="$1"
-            shift
-            ;;
-    esac
-done
-
-if [[ ! "$DB_TARGET" =~ ^(f3auth|f3prod|all)$ ]]; then
-    echo "Error: Invalid --db value '$DB_TARGET'. Must be: f3auth, f3prod, or all"
-    exit 1
-fi
 
 # Check for psql
 if ! command -v psql &> /dev/null; then
@@ -84,17 +62,12 @@ get_env_var() {
 # Function to seed a single database
 seed_db() {
     local db_name="$1"
-    local custom_snapshot_path="$2"
     local db_url
     local env_var
     db_url=$(get_db_url "$db_name")
     env_var=$(get_env_var "$db_name")
 
-    # Determine snapshot path
-    local snapshot_path="$custom_snapshot_path"
-    if [[ -z "$snapshot_path" ]]; then
-        snapshot_path="$SNAPSHOTS_DIR/$db_name/latest"
-    fi
+    local snapshot_path="$SNAPSHOTS_DIR/$db_name/latest"
 
     # Resolve symlink if needed
     if [[ -L "$snapshot_path" ]]; then
@@ -103,7 +76,7 @@ seed_db() {
 
     if [[ ! -d "$snapshot_path" ]]; then
         echo "Warning: No snapshot found for $db_name at $snapshot_path"
-        echo "Run 'npm run db:snapshot --db $db_name' first to create a snapshot"
+        echo "Run 'npm run db:snapshot' first to create a snapshot"
         return 1
     fi
 
@@ -174,30 +147,20 @@ seed_db() {
     echo "  $env_var=$db_url"
 }
 
-# Execute based on target
+# Seed both databases
 SEED_FAILED=false
 
-if [[ "$DB_TARGET" == "all" ]]; then
-    echo "Seeding all databases..."
-    echo ""
+echo "Seeding all databases..."
+echo ""
 
-    if ! seed_db "f3auth" ""; then
-        SEED_FAILED=true
-    fi
+if ! seed_db "f3auth"; then
+    SEED_FAILED=true
+fi
 
-    echo ""
+echo ""
 
-    if ! seed_db "f3prod" ""; then
-        SEED_FAILED=true
-    fi
-elif [[ "$DB_TARGET" == "f3auth" ]]; then
-    if ! seed_db "f3auth" "$SNAPSHOT_PATH"; then
-        SEED_FAILED=true
-    fi
-else
-    if ! seed_db "f3prod" "$SNAPSHOT_PATH"; then
-        SEED_FAILED=true
-    fi
+if ! seed_db "f3prod"; then
+    SEED_FAILED=true
 fi
 
 echo ""

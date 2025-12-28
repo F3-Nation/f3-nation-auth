@@ -2,43 +2,13 @@
 set -euo pipefail
 
 # Pull database snapshot from production databases defined in .env.firebase
-# Usage: ./scripts/db/snapshot.sh [--db f3auth|f3prod|all] [--type full|schema|data]
+# Usage: ./scripts/db/snapshot.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 SNAPSHOTS_DIR="$PROJECT_DIR/db-snapshots"
 
-# Parse arguments
 DUMP_TYPE="full"
-DB_TARGET="f3auth"
-
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --type)
-            DUMP_TYPE="$2"
-            shift 2
-            ;;
-        --db)
-            DB_TARGET="$2"
-            shift 2
-            ;;
-        *)
-            echo "Unknown option: $1"
-            echo "Usage: $0 [--db f3auth|f3prod|all] [--type full|schema|data]"
-            exit 1
-            ;;
-    esac
-done
-
-if [[ ! "$DUMP_TYPE" =~ ^(full|schema|data)$ ]]; then
-    echo "Error: Invalid dump type '$DUMP_TYPE'. Must be: full, schema, or data"
-    exit 1
-fi
-
-if [[ ! "$DB_TARGET" =~ ^(f3auth|f3prod|all)$ ]]; then
-    echo "Error: Invalid --db value '$DB_TARGET'. Must be: f3auth, f3prod, or all"
-    exit 1
-fi
 
 # Load specific environment variables safely (avoid sourcing entire file)
 load_env_var() {
@@ -240,18 +210,12 @@ EOF
     echo "Snapshot complete: $SNAPSHOT_DIR"
 }
 
-# Execute based on target
-if [[ "$DB_TARGET" == "all" ]]; then
-    echo "Snapshotting all databases..."
-    echo ""
-    snapshot_db "f3auth" "DATABASE_URL"
-    echo ""
-    snapshot_db "f3prod" "F3_DATABASE_URL"
-elif [[ "$DB_TARGET" == "f3auth" ]]; then
-    snapshot_db "f3auth" "DATABASE_URL"
-else
-    snapshot_db "f3prod" "F3_DATABASE_URL"
-fi
+# Snapshot both databases
+echo "Snapshotting all databases..."
+echo ""
+snapshot_db "f3auth" "DATABASE_URL"
+echo ""
+snapshot_db "f3prod" "F3_DATABASE_URL"
 
 echo ""
-echo "Use 'npm run db:local:seed' or 'npm run db:local:seed:all' to load into local database"
+echo "Use 'npm run db:local:seed' to load into local database"

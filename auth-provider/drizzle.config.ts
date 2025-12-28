@@ -13,4 +13,8 @@ export default {
   },
   schemaFilter: ['auth'], // Only manage auth schema, not public
   tablesFilter: ['!users'], // Exclude the external public.users table
+  migrations: {
+    table: 'drizzle_migrations',
+    schema: 'auth', // Store migrations table in auth schema (we have access to this)
+  },
 } satisfies Config;

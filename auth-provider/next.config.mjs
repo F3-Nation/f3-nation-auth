@@ -6,6 +6,10 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    // Disable instrumentation hook to prevent OpenTelemetry from interfering with API routes
+    instrumentationHook: false,
+  },
   images: {
     remotePatterns: [
       {

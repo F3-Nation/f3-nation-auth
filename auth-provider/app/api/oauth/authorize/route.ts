@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/db';
-import { oauthClients } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { oauthClientRepository } from '@/db';
 import {
   validateClient,
   validateRedirectUri,
@@ -107,13 +105,9 @@ export async function GET(request: NextRequest) {
       const response = NextResponse.redirect(loginUrl.toString());
       const origin = request.headers.get('origin');
       if (origin) {
-        const [client] = await db
-          .select()
-          .from(oauthClients)
-          .where(eq(oauthClients.id, authRequest.client_id))
-          .limit(1);
-        if (client && origin === client.allowedOrigin) {
-          response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
+        const dbClient = await oauthClientRepository.findById(authRequest.client_id);
+        if (dbClient && origin === dbClient.allowedOrigin) {
+          response.headers.set('Access-Control-Allow-Origin', dbClient.allowedOrigin);
           response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
           response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
           response.headers.set('Access-Control-Allow-Credentials', 'true');
@@ -180,13 +174,9 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.redirect(redirectUrl.toString());
     const origin = request.headers.get('origin');
     if (origin) {
-      const [client] = await db
-        .select()
-        .from(oauthClients)
-        .where(eq(oauthClients.id, authRequest.client_id))
-        .limit(1);
-      if (client && origin === client.allowedOrigin) {
-        response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
+      const dbClient = await oauthClientRepository.findById(authRequest.client_id);
+      if (dbClient && origin === dbClient.allowedOrigin) {
+        response.headers.set('Access-Control-Allow-Origin', dbClient.allowedOrigin);
         response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
         response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
         response.headers.set('Access-Control-Allow-Credentials', 'true');
@@ -207,13 +197,9 @@ export async function GET(request: NextRequest) {
       const response = NextResponse.redirect(errorUrl.toString());
       const origin = request.headers.get('origin');
       if (origin) {
-        const [client] = await db
-          .select()
-          .from(oauthClients)
-          .where(eq(oauthClients.id, authRequest.client_id))
-          .limit(1);
-        if (client && origin === client.allowedOrigin) {
-          response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
+        const dbClient = await oauthClientRepository.findById(authRequest.client_id);
+        if (dbClient && origin === dbClient.allowedOrigin) {
+          response.headers.set('Access-Control-Allow-Origin', dbClient.allowedOrigin);
           response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
           response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
           response.headers.set('Access-Control-Allow-Credentials', 'true');

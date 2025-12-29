@@ -6,18 +6,12 @@ import {
   refreshAccessToken,
   type TokenRequest,
 } from '@/lib/oauth';
-import { db } from '@/db';
-import { oauthClients } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { oauthClientRepository } from '@/db';
 
 // Add CORS headers
 async function addCorsHeaders(response: NextResponse, origin: string | null, clientId?: string) {
   if (origin && clientId) {
-    const [client] = await db
-      .select()
-      .from(oauthClients)
-      .where(eq(oauthClients.id, clientId))
-      .limit(1);
+    const client = await oauthClientRepository.findById(clientId);
     if (client && origin === client.allowedOrigin) {
       response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
       response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');

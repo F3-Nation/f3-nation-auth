@@ -1,9 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/db';
-import { users, userProfiles } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { userRepository, userProfileRepository } from '@/db';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -14,17 +12,11 @@ export async function GET() {
 
   try {
     // Get user data from public.users
-    const userResult = await db.select().from(users).where(eq(users.id, session.user.id)).limit(1);
-    const dbUser = userResult[0];
+    const dbUser = await userRepository.findById(session.user.id);
 
     if (dbUser) {
       // Get profile data from auth.user_profiles
-      const profileResult = await db
-        .select()
-        .from(userProfiles)
-        .where(eq(userProfiles.userId, dbUser.id))
-        .limit(1);
-      const profile = profileResult[0];
+      const profile = await userProfileRepository.findByUserId(dbUser.id);
 
       // Merge session data with database data
       const enhancedSession = {

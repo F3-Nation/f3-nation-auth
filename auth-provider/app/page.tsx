@@ -2,9 +2,7 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import ThemeImage from './components/ThemeImage';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/db';
-import { users, userProfiles } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { userRepository, userProfileRepository } from '@/db';
 import SignOutButton from './components/SignOutButton';
 
 interface User {
@@ -31,27 +29,10 @@ export default async function Home({ searchParams }: PageProps) {
   }
 
   // Get user data from public.users
-  const userResult = await db
-    .select({
-      f3Name: users.f3Name,
-    })
-    .from(users)
-    .where(eq(users.id, session.user.id))
-    .limit(1);
-
-  const userData = userResult[0];
+  const userData = await userRepository.findById(session.user.id);
 
   // Get profile data from auth.user_profiles
-  const profileResult = await db
-    .select({
-      onboardingCompleted: userProfiles.onboardingCompleted,
-      hospitalName: userProfiles.hospitalName,
-    })
-    .from(userProfiles)
-    .where(eq(userProfiles.userId, session.user.id))
-    .limit(1);
-
-  const profile = profileResult[0];
+  const profile = await userProfileRepository.findByUserId(session.user.id);
 
   // Preserve any OAuth callback parameters
   const callbackParams = new URLSearchParams();

@@ -1,17 +1,16 @@
 /**
  * Custom migration runner for restricted database permissions.
  *
- * This script applies Drizzle-generated SQL migrations without requiring
- * CREATE SCHEMA privileges. It assumes the target schema already exists
- * and tracks applied migrations in auth.drizzle_migrations table.
+ * This script applies SQL migrations without requiring CREATE SCHEMA privileges.
+ * It assumes the target schema already exists and tracks applied migrations
+ * in auth.schema_migrations table.
  *
  * Usage:
  *   npx tsx scripts/db/migrate.ts
  *
  * Workflow:
- *   1. Develop locally with full permissions (local Docker DB)
- *   2. Generate migrations: npm run db:generate
- *   3. Deploy to prod: npm run db:deploy (uses this script)
+ *   1. Write SQL migration files in the migrations/ directory
+ *   2. Deploy to prod: npm run db:deploy (uses this script)
  */
 
 import { config } from 'dotenv';
@@ -22,8 +21,8 @@ import { Pool } from 'pg';
 // Load environment variables
 config({ path: path.resolve(__dirname, '../../.env.local') });
 
-const MIGRATIONS_DIR = path.resolve(__dirname, '../../drizzle');
-const MIGRATIONS_TABLE = 'drizzle_migrations';
+const MIGRATIONS_DIR = path.resolve(__dirname, '../../migrations');
+const MIGRATIONS_TABLE = 'schema_migrations';
 const MIGRATIONS_SCHEMA = 'auth';
 
 // Statements to skip (user doesn't have permission)
@@ -114,7 +113,7 @@ async function getAppliedMigrations(client: import('pg').PoolClient): Promise<Se
 }
 
 async function applyMigration(client: import('pg').PoolClient, name: string, sql: string) {
-  // Split by Drizzle's statement breakpoint marker
+  // Split by statement breakpoint marker
   const statements = sql
     .split('--> statement-breakpoint')
     .map(s => s.trim())

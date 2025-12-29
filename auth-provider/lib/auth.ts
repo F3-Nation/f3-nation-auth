@@ -1,10 +1,8 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { DrizzleAdapter } from '@auth/drizzle-adapter';
-import { db, type DB, ensureSequenceSynced } from '@/db';
+import { createAdapter } from './next-auth-adapter';
+import { ensureSequenceSynced, userRepository, userProfileRepository } from '@/db';
 import { createEmailVerification, verifyEmailCode } from './mfa';
-import { users, userProfiles } from '../db/schema';
-import { eq } from 'drizzle-orm';
 
 declare module 'next-auth' {
   interface Session {
@@ -79,12 +77,7 @@ export const authOptions: NextAuthOptions = {
 
         // Create or find user in database (public.users)
         try {
-          const userResult = await db
-            .select()
-            .from(users)
-            .where(eq(users.email, credentials.email!))
-            .limit(1);
-          let existingUser = userResult[0] || null;
+          let existingUser = await userRepository.findByEmail(credentials.email!);
 
           if (!existingUser) {
             // Ensure the users_id_seq is synced before inserting
@@ -92,40 +85,28 @@ export const authOptions: NextAuthOptions = {
 
             // Create new user in public.users
             const f3Name = credentials.email!.split('@')[0];
-            const insertResult = await db
-              .insert(users)
-              .values({
-                f3Name: f3Name,
-                email: credentials.email!,
-                emailVerified: new Date(),
-                status: 'active',
-              })
-              .returning();
-            existingUser = insertResult[0];
+            existingUser = await userRepository.create({
+              f3Name: f3Name,
+              email: credentials.email!,
+              emailVerified: new Date(),
+              status: 'active',
+            });
 
             // Create user profile in auth.user_profiles
-            await db.insert(userProfiles).values({
+            await userProfileRepository.create({
               userId: existingUser.id,
               onboardingCompleted: false,
             });
           } else {
             // User exists, update emailVerified timestamp
-            await db
-              .update(users)
-              .set({
-                emailVerified: new Date(),
-                updated: new Date(),
-              })
-              .where(eq(users.id, existingUser.id));
+            await userRepository.update(existingUser.id, {
+              emailVerified: new Date(),
+              updated: new Date(),
+            });
           }
 
           // Fetch user profile for onboarding status
-          const profileResult = await db
-            .select()
-            .from(userProfiles)
-            .where(eq(userProfiles.userId, existingUser.id))
-            .limit(1);
-          const profile = profileResult[0];
+          const profile = await userProfileRepository.findByUserId(existingUser.id);
 
           console.log('Successfully found/created user:', existingUser);
           // Map database fields to NextAuth expected fields
@@ -145,7 +126,7 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  adapter: DrizzleAdapter(db as unknown as DB),
+  adapter: createAdapter(),
   session: {
     strategy: 'jwt', // Use JWT for credentials providers
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -186,23 +167,13 @@ export const authOptions: NextAuthOptions = {
 
         // Fetch additional user data from database (join users + user_profiles)
         try {
-          const userResult = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, token.id as number))
-            .limit(1);
-          const dbUser = userResult[0];
+          const dbUser = await userRepository.findById(token.id as number);
 
           if (dbUser) {
             session.user.f3Name = dbUser.f3Name;
 
             // Fetch profile data
-            const profileResult = await db
-              .select()
-              .from(userProfiles)
-              .where(eq(userProfiles.userId, dbUser.id))
-              .limit(1);
-            const profile = profileResult[0];
+            const profile = await userProfileRepository.findByUserId(dbUser.id);
 
             if (profile) {
               session.user.onboardingCompleted = profile.onboardingCompleted;

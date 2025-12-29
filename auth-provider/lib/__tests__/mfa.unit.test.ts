@@ -167,7 +167,7 @@ describe('mfa', () => {
 
     it('logs verification info in non-production environment', async () => {
       const originalNodeEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
+      (process.env as { NODE_ENV: string }).NODE_ENV = 'development';
 
       vi.spyOn(console, 'warn').mockImplementation(() => {});
       const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
@@ -181,7 +181,7 @@ describe('mfa', () => {
         })
       );
 
-      process.env.NODE_ENV = originalNodeEnv;
+      (process.env as { NODE_ENV: string | undefined }).NODE_ENV = originalNodeEnv;
     });
   });
 
@@ -198,7 +198,7 @@ describe('mfa', () => {
         codeHash: testCodeHash,
         expiresAt: futureDate,
         attemptCount: 0,
-        consumed: false,
+        consumedAt: null,
         createdAt: new Date(),
       });
 
@@ -224,7 +224,7 @@ describe('mfa', () => {
         codeHash: testCodeHash,
         expiresAt: pastDate,
         attemptCount: 0,
-        consumed: false,
+        consumedAt: null,
         createdAt: new Date(),
       });
 
@@ -242,7 +242,7 @@ describe('mfa', () => {
         codeHash: 'different-hash',
         expiresAt: futureDate,
         attemptCount: 0,
-        consumed: false,
+        consumedAt: null,
         createdAt: new Date(),
       });
 
@@ -260,7 +260,7 @@ describe('mfa', () => {
         codeHash: testCodeHash,
         expiresAt: futureDate,
         attemptCount: 0,
-        consumed: false,
+        consumedAt: null,
         createdAt: new Date(),
       });
 
@@ -293,7 +293,7 @@ describe('mfa', () => {
         codeHash: specificHash,
         expiresAt: futureDate,
         attemptCount: 0,
-        consumed: false,
+        consumedAt: null,
         createdAt: new Date(),
       });
 
@@ -311,7 +311,7 @@ describe('mfa', () => {
         codeHash: testCodeHash,
         expiresAt: now,
         attemptCount: 0,
-        consumed: false,
+        consumedAt: null,
         createdAt: new Date(),
       });
 

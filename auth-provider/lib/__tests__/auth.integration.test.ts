@@ -3,6 +3,17 @@ import type { NextAuthOptions } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import type { Session, User } from 'next-auth';
 import type { CredentialsConfig } from 'next-auth/providers/credentials';
+
+// Mock request object for authorize tests - matches Pick<RequestInternal, 'body' | 'query' | 'headers' | 'method'>
+const mockRequest = {
+  body: {} as Record<string, unknown>,
+  query: {} as Record<string, unknown>,
+  headers: {} as Record<string, unknown>,
+  method: 'POST' as string,
+};
+
+// Define the session user type for type assertions
+type SessionUser = Session['user'];
 import {
   setupTestDatabase,
   teardownTestDatabase,
@@ -79,8 +90,12 @@ describe('NextAuth Configuration', () => {
       const authorize = provider.authorize!;
 
       const result = await authorize(
-        { email: 'test@example.com', code: undefined, callbackUrl: 'http://localhost:3000' },
-        {} as Request
+        {
+          email: 'test@example.com',
+          code: undefined as unknown as string,
+          callbackUrl: 'http://localhost:3000',
+        },
+        mockRequest
       );
 
       // Should return null (verification email sent)
@@ -93,8 +108,12 @@ describe('NextAuth Configuration', () => {
 
       try {
         const result = await authorize(
-          { email: undefined, code: undefined, callbackUrl: 'http://localhost:3000' },
-          {} as Request
+          {
+            email: undefined as unknown as string,
+            code: undefined as unknown as string,
+            callbackUrl: 'http://localhost:3000',
+          },
+          mockRequest
         );
         // If no error thrown, authorize should return null (unable to proceed without email)
         expect(result).toBeNull();
@@ -111,7 +130,7 @@ describe('NextAuth Configuration', () => {
 
       const result = await authorize(
         { email: 'newuser@example.com', code: '123456', callbackUrl: 'http://localhost:3000' },
-        {} as Request
+        mockRequest
       );
 
       // Note: With mocks in place, the user might be created
@@ -149,7 +168,7 @@ describe('NextAuth Configuration', () => {
 
       const result = await authorize(
         { email: 'existing@example.com', code: '123456', callbackUrl: 'http://localhost:3000' },
-        {} as Request
+        mockRequest
       );
 
       // If mocks are properly applied, result should be the user
@@ -180,7 +199,7 @@ describe('NextAuth Configuration', () => {
       try {
         const result = await authorize(
           { email: 'test@example.com', code: 'wrong-code', callbackUrl: 'http://localhost:3000' },
-          {} as Request
+          mockRequest
         );
         // If no error thrown, authorize should return null (invalid code)
         expect(result).toBeNull();
@@ -196,7 +215,7 @@ describe('NextAuth Configuration', () => {
       const signIn = authOptions.callbacks!.signIn!;
 
       const result = await signIn({
-        user: { id: '1' } as User,
+        user: { id: 1 } as User,
         account: null,
         profile: undefined,
         email: undefined,
@@ -211,7 +230,7 @@ describe('NextAuth Configuration', () => {
     it('adds user info to token on sign in', async () => {
       const jwt = authOptions.callbacks!.jwt!;
 
-      const token: JWT = {};
+      const token: JWT = { id: 0 };
       const user: User = {
         id: 123,
         name: 'Test User',
@@ -292,16 +311,21 @@ describe('NextAuth Configuration', () => {
       const result = await sessionCallback({
         session,
         token,
-        user: undefined as unknown as User,
+        user: {
+          id: '0',
+          email: '',
+          emailVerified: null,
+        } as import('next-auth/adapters').AdapterUser,
         trigger: 'update',
         newSession: undefined,
       });
 
-      expect(result.user.id).toBe(createdUser.id);
-      expect(result.user.email).toBe('session@example.com');
-      expect(result.user.f3Name).toBe('SessionUser');
-      expect(result.user.onboardingCompleted).toBe(true);
-      expect(result.user.hospitalName).toBe('Session Hospital');
+      const user = result.user as SessionUser;
+      expect(user.id).toBe(createdUser.id);
+      expect(user.email).toBe('session@example.com');
+      expect(user.f3Name).toBe('SessionUser');
+      expect(user.onboardingCompleted).toBe(true);
+      expect(user.hospitalName).toBe('Session Hospital');
     });
 
     it('handles missing user profile gracefully', async () => {
@@ -327,13 +351,18 @@ describe('NextAuth Configuration', () => {
       const result = await sessionCallback({
         session,
         token,
-        user: undefined as unknown as User,
+        user: {
+          id: '0',
+          email: '',
+          emailVerified: null,
+        } as import('next-auth/adapters').AdapterUser,
         trigger: 'update',
         newSession: undefined,
       });
 
-      expect(result.user.id).toBe(createdUser.id);
-      expect(result.user.f3Name).toBe('NoProfile');
+      const user = result.user as SessionUser;
+      expect(user.id).toBe(createdUser.id);
+      expect(user.f3Name).toBe('NoProfile');
       // Profile fields should be undefined when profile doesn't exist
     });
 
@@ -355,13 +384,18 @@ describe('NextAuth Configuration', () => {
       const result = await sessionCallback({
         session,
         token,
-        user: undefined as unknown as User,
+        user: {
+          id: '0',
+          email: '',
+          emailVerified: null,
+        } as import('next-auth/adapters').AdapterUser,
         trigger: 'update',
         newSession: undefined,
       });
 
-      expect(result.user.id).toBe(99999);
-      expect(result.user.email).toBe('ghost@example.com');
+      const user = result.user as SessionUser;
+      expect(user.id).toBe(99999);
+      expect(user.email).toBe('ghost@example.com');
     });
   });
 

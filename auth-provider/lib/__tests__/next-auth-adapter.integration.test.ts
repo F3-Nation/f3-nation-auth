@@ -370,9 +370,9 @@ describe('NextAuth Adapter', () => {
         expires,
       });
 
-      expect(token.identifier).toBe('verify@example.com');
-      expect(token.token).toBe('verification-token-123');
-      expect(token.expires).toEqual(expires);
+      expect(token!.identifier).toBe('verify@example.com');
+      expect(token!.token).toBe('verification-token-123');
+      expect(token!.expires).toEqual(expires);
     });
 
     it('useVerificationToken consumes and returns the token', async () => {

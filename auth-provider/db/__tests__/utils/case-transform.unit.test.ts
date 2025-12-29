@@ -377,7 +377,7 @@ describe('case-transform', () => {
         isActive: true,
       };
 
-      const row = entityToRow(original);
+      const row = entityToRow(original) as Record<string, unknown>;
       const restored = rowToEntity(row);
 
       expect(restored).toEqual(original);
@@ -392,7 +392,7 @@ describe('case-transform', () => {
         is_active: true,
       };
 
-      const entity = rowToEntity(original);
+      const entity = rowToEntity(original) as Record<string, unknown>;
       const restored = entityToRow(entity);
 
       expect(restored).toEqual(original);

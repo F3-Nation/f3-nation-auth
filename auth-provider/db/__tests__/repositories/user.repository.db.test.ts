@@ -100,7 +100,7 @@ describe('UserRepository', () => {
       const userData = createUserData();
       const created = await repos.users.create(userData);
 
-      const found = await repos.users.findByEmail(userData.email);
+      const found = await repos.users.findByEmail(userData.email!);
 
       expect(found).toBeDefined();
       expect(found?.id).toBe(created.id);

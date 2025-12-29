@@ -14,6 +14,11 @@ import {
   mockGetServerSession,
 } from '@/test/utils/mocks';
 import { createUserData, resetAllFactoryCounters } from '@/test/utils/factories';
+import {
+  setGlobalRepositories,
+  clearGlobalRepositories,
+  createDbMockFactory,
+} from '@/test/utils/db-mock';
 
 // Store the POST function reference
 let POST: typeof import('../route').POST;
@@ -22,7 +27,11 @@ describe('POST /api/onboarding', () => {
   beforeAll(async () => {
     await setupTestDatabase();
 
-    const repos = getTestRepositories();
+    // Store repositories in global for the mock to access
+    setGlobalRepositories(getTestRepositories());
+
+    // Reset all modules to clear any cached imports
+    vi.resetModules();
 
     // Mock next-auth
     vi.doMock('next-auth', () => ({
@@ -30,10 +39,7 @@ describe('POST /api/onboarding', () => {
     }));
 
     // Mock the database module
-    vi.doMock('@/db', () => ({
-      userRepository: repos.userRepository,
-      userProfileRepository: repos.userProfileRepository,
-    }));
+    vi.doMock('@/db', createDbMockFactory());
 
     // Mock auth options
     vi.doMock('@/lib/auth', () => ({
@@ -46,6 +52,7 @@ describe('POST /api/onboarding', () => {
   });
 
   afterAll(async () => {
+    clearGlobalRepositories();
     vi.resetModules();
     await teardownTestDatabase();
   });

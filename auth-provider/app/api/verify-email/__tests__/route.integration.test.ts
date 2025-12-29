@@ -11,6 +11,11 @@ import {
   createExpiredMfaCodeData,
   resetAllFactoryCounters,
 } from '@/test/utils/factories';
+import {
+  setGlobalRepositories,
+  clearGlobalRepositories,
+  createDbMockFactory,
+} from '@/test/utils/db-mock';
 
 // Store the POST function reference
 let POST: typeof import('../route').POST;
@@ -19,10 +24,14 @@ describe('POST /api/verify-email', () => {
   beforeAll(async () => {
     await setupTestDatabase();
 
-    // Mock the database module AFTER test database is set up
-    vi.doMock('@/db', () => ({
-      emailMfaCodeRepository: getTestRepositories().emailMfaCodeRepository,
-    }));
+    // Store repositories in global for the mock to access
+    setGlobalRepositories(getTestRepositories());
+
+    // Reset all modules to clear any cached imports
+    vi.resetModules();
+
+    // Setup the mock for @/db
+    vi.doMock('@/db', createDbMockFactory());
 
     // Dynamically import the route after mocking
     const routeModule = await import('../route');
@@ -30,6 +39,7 @@ describe('POST /api/verify-email', () => {
   });
 
   afterAll(async () => {
+    clearGlobalRepositories();
     vi.resetModules();
     await teardownTestDatabase();
   });

@@ -17,6 +17,11 @@ import {
   createUserProfileData,
   resetAllFactoryCounters,
 } from '@/test/utils/factories';
+import {
+  setGlobalRepositories,
+  clearGlobalRepositories,
+  createDbMockFactory,
+} from '@/test/utils/db-mock';
 
 // Store the GET function reference
 let GET: typeof import('../route').GET;
@@ -25,7 +30,11 @@ describe('GET /api/session', () => {
   beforeAll(async () => {
     await setupTestDatabase();
 
-    const repos = getTestRepositories();
+    // Store repositories in global for the mock to access
+    setGlobalRepositories(getTestRepositories());
+
+    // Reset all modules to clear any cached imports
+    vi.resetModules();
 
     // Mock next-auth
     vi.doMock('next-auth', () => ({
@@ -33,10 +42,7 @@ describe('GET /api/session', () => {
     }));
 
     // Mock the database module
-    vi.doMock('@/db', () => ({
-      userRepository: repos.userRepository,
-      userProfileRepository: repos.userProfileRepository,
-    }));
+    vi.doMock('@/db', createDbMockFactory());
 
     // Mock auth options
     vi.doMock('@/lib/auth', () => ({
@@ -49,6 +55,7 @@ describe('GET /api/session', () => {
   });
 
   afterAll(async () => {
+    clearGlobalRepositories();
     vi.resetModules();
     await teardownTestDatabase();
   });

@@ -11,6 +11,11 @@ import {
   createOAuthClientData,
   resetAllFactoryCounters,
 } from '@/test/utils/factories';
+import {
+  setGlobalRepositories,
+  clearGlobalRepositories,
+  createDbMockFactory,
+} from '@/test/utils/db-mock';
 import { createHash } from 'crypto';
 
 // Store the route function references
@@ -21,15 +26,14 @@ describe('POST /api/oauth/token', () => {
   beforeAll(async () => {
     await setupTestDatabase();
 
-    const repos = getTestRepositories();
+    // Store repositories in global for the mock to access
+    setGlobalRepositories(getTestRepositories());
+
+    // Reset all modules to clear any cached imports
+    vi.resetModules();
 
     // Mock the database module
-    vi.doMock('@/db', () => ({
-      oauthClientRepository: repos.oauthClientRepository,
-      oauthAuthorizationCodeRepository: repos.oauthAuthorizationCodeRepository,
-      oauthAccessTokenRepository: repos.oauthAccessTokenRepository,
-      oauthRefreshTokenRepository: repos.oauthRefreshTokenRepository,
-    }));
+    vi.doMock('@/db', createDbMockFactory());
 
     // Dynamically import the route after mocking
     const routeModule = await import('../route');
@@ -38,6 +42,7 @@ describe('POST /api/oauth/token', () => {
   });
 
   afterAll(async () => {
+    clearGlobalRepositories();
     vi.resetModules();
     await teardownTestDatabase();
   });

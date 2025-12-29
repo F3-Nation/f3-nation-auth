@@ -102,23 +102,21 @@ export async function createEmailVerification(email: string, callbackUrl: string
 
   const codeHash = hashCode(code);
 
-  await db.transaction(async tx => {
-    // Clean up expired codes for all users to keep the table tidy
-    await tx.delete(emailMfaCodes).where(lt(emailMfaCodes.expiresAt, issuedAt));
+  // Clean up expired codes for all users to keep the table tidy
+  await db.delete(emailMfaCodes).where(lt(emailMfaCodes.expiresAt, issuedAt));
 
-    // Ensure only one active code exists per email address
-    await tx
-      .delete(emailMfaCodes)
-      .where(and(eq(emailMfaCodes.email, email), isNull(emailMfaCodes.consumedAt)));
+  // Ensure only one active code exists per email address
+  await db
+    .delete(emailMfaCodes)
+    .where(and(eq(emailMfaCodes.email, email), isNull(emailMfaCodes.consumedAt)));
 
-    await tx.insert(emailMfaCodes).values({
-      id: verificationId,
-      email,
-      codeHash,
-      expiresAt,
-      attemptCount: 0,
-      createdAt: issuedAt,
-    });
+  await db.insert(emailMfaCodes).values({
+    id: verificationId,
+    email,
+    codeHash,
+    expiresAt,
+    attemptCount: 0,
+    createdAt: issuedAt,
   });
 
   const baseUrl = resolveBaseUrl();

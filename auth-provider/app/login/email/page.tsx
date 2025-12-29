@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
 import ThemeImage from '../../components/ThemeImage';
 
 function EmailLoginContent() {
@@ -44,27 +43,21 @@ function EmailLoginContent() {
     }
 
     try {
-      // First step: send verification email
-      let result;
-      try {
-        result = await signIn('email', {
-          email,
-          callbackUrl,
-          redirect: false,
-        });
-      } catch (signInError) {
-        // next-auth may throw when parsing response with undefined url
-        // This is expected when authorize returns null after sending verification email
-        console.log('SignIn threw (expected for email verification step):', signInError);
-      }
+      // Send verification email via dedicated API endpoint
+      const response = await fetch('/api/send-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, callbackUrl }),
+      });
 
-      // When sending verification email, NextAuth returns null (not an error)
-      // The error "CredentialsSignin" is expected for the first step
-      if (result?.error && result.error !== 'CredentialsSignin') {
-        setError(result.error);
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to send verification email');
       } else {
-        // Redirect to verification page regardless of the "CredentialsSignin" error
-        // This error is expected when just sending the verification email
+        // Redirect to verification page
         window.location.href = `/login/email/verify?email=${encodeURIComponent(email)}&callbackUrl=${encodeURIComponent(callbackUrl)}`;
       }
     } catch {

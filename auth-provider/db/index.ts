@@ -3,6 +3,10 @@ import { Pool } from 'pg';
 import { sql } from 'drizzle-orm';
 import * as schema from './schema';
 
+if (!process.env.DATABASE_URL) {
+  console.warn('DATABASE_URL environment variable is not set. Database operations will fail.');
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });

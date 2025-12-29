@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { encode } from 'base64-url';
 import {
   generateSecureToken,
   validateRedirectUri,
@@ -302,7 +303,6 @@ describe('oauth', () => {
 
     it('throws error for state without csrfToken', () => {
       // Manually encode state without csrfToken
-      const { encode } = require('base64-url');
       const invalidState = encode(JSON.stringify({ clientId: 'client' }));
 
       // The function catches inner errors and throws generic 'Invalid state parameter'

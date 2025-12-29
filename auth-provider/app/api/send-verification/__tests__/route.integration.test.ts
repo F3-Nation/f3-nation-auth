@@ -72,17 +72,6 @@ describe('POST /api/send-verification', () => {
     }
   });
 
-  // Helper to skip tests when Docker is not available
-  const itWithDocker = (name: string, fn: () => Promise<void>) => {
-    it(name, async () => {
-      if (!dockerAvailable) {
-        console.log(`Skipping: ${name} (Docker not available)`);
-        return;
-      }
-      await fn();
-    });
-  };
-
   beforeEach(async () => {
     await cleanupTestData();
     resetAllFactoryCounters();

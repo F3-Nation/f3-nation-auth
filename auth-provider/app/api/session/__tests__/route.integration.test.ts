@@ -9,14 +9,9 @@ import {
   setMockSession,
   clearMockSession,
   createAuthenticatedSession,
-  createOnboardedSession,
   mockGetServerSession,
 } from '@/test/utils/mocks';
-import {
-  createUserData,
-  createUserProfileData,
-  resetAllFactoryCounters,
-} from '@/test/utils/factories';
+import { createUserData, resetAllFactoryCounters } from '@/test/utils/factories';
 import {
   setGlobalRepositories,
   clearGlobalRepositories,

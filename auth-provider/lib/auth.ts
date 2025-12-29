@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { createAdapter } from './next-auth-adapter';
 import { ensureSequenceSynced, userRepository, userProfileRepository } from '@/db';
 import { createEmailVerification, verifyEmailCode } from './mfa';
+import { isAdmin } from './admin';
 
 declare module 'next-auth' {
   interface Session {
@@ -14,6 +15,7 @@ declare module 'next-auth' {
       onboardingCompleted?: boolean;
       hospitalName?: string | null;
       f3Name?: string | null;
+      isAdmin?: boolean;
     };
   }
 
@@ -164,6 +166,7 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name as string | null;
         session.user.email = token.email as string | null;
         session.user.image = token.image as string | null;
+        session.user.isAdmin = isAdmin(token.email as string | null);
 
         // Fetch additional user data from database (join users + user_profiles)
         try {

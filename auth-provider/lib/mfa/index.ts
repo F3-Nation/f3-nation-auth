@@ -1,7 +1,7 @@
 import crypto from 'crypto';
-import { and, eq, isNull, lt, desc } from 'drizzle-orm';
+import { and, eq, isNull, desc } from 'drizzle-orm';
 
-import { db } from '@/db';
+import { db, pool } from '@/db';
 import { emailMfaCodes } from '@/db/schema';
 
 const CODE_TTL_MINUTES = 10;
@@ -102,22 +102,27 @@ export async function createEmailVerification(email: string, callbackUrl: string
 
   const codeHash = hashCode(code);
 
-  // Clean up expired codes for all users to keep the table tidy
-  await db.delete(emailMfaCodes).where(lt(emailMfaCodes.expiresAt, issuedAt));
+  // Use raw SQL queries to bypass Drizzle's caching that conflicts with Next.js 15 tracing
+  const client = await pool.connect();
+  try {
+    // Clean up expired codes for all users to keep the table tidy
+    await client.query('DELETE FROM auth.email_mfa_codes WHERE expires_at < $1', [issuedAt]);
 
-  // Ensure only one active code exists per email address
-  await db
-    .delete(emailMfaCodes)
-    .where(and(eq(emailMfaCodes.email, email), isNull(emailMfaCodes.consumedAt)));
+    // Ensure only one active code exists per email address
+    await client.query(
+      'DELETE FROM auth.email_mfa_codes WHERE email = $1 AND consumed_at IS NULL',
+      [email]
+    );
 
-  await db.insert(emailMfaCodes).values({
-    id: verificationId,
-    email,
-    codeHash,
-    expiresAt,
-    attemptCount: 0,
-    createdAt: issuedAt,
-  });
+    // Insert new verification code
+    await client.query(
+      `INSERT INTO auth.email_mfa_codes (id, email, code_hash, expires_at, attempt_count, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [verificationId, email, codeHash, expiresAt, 0, issuedAt]
+    );
+  } finally {
+    client.release();
+  }
 
   const baseUrl = resolveBaseUrl();
   const magicLink = `${baseUrl}/login/email/verify?email=${encodeURIComponent(email)}&code=${encodeURIComponent(code)}&callbackUrl=${encodeURIComponent(callbackUrl)}`;

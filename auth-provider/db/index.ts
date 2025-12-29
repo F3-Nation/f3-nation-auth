@@ -11,6 +11,9 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Export pool for raw SQL queries when needed (bypasses Drizzle's caching)
+export { pool };
+
 // Use drizzle to wrap the PG pool with schema types
 export const db = drizzle(pool, { schema });
 

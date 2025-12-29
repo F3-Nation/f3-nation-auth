@@ -2,17 +2,23 @@
 
 # Configuration constants
 SECRET_VARS=("NEXTAUTH_SECRET" "AUTH_PROVIDER_URL" "NEXTAUTH_URL" "NEXT_PUBLIC_NEXTAUTH_URL" "OAUTH_CLIENT_ID" "OAUTH_CLIENT_SECRET" "OAUTH_REDIRECT_URI")
-SECRET_IDS=("client-nextauth-secret" "client-auth-provider-url" "client-nextauth-url" "client-next-public-nextauth-url" "client-oauth-client-id" "client-oauth-client-secret" "client-oauth-redirect-uri")
+
+# Get secret IDs with environment-specific prefix (staging uses "staging-client-*", prod uses "client-*")
+get_secret_ids_for_env() {
+  local env="$1"
+  local prefix=""
+
+  if [[ "$env" == "staging" ]]; then
+    prefix="staging-"
+  fi
+
+  echo "${prefix}client-nextauth-secret ${prefix}client-auth-provider-url ${prefix}client-nextauth-url ${prefix}client-next-public-nextauth-url ${prefix}client-oauth-client-id ${prefix}client-oauth-client-secret ${prefix}client-oauth-redirect-uri"
+}
 
 # Environment-specific configurations
 get_project_id_for_env() {
-  local env="$1"
-
-  if [[ "$env" == "staging" ]]; then
-    echo "auth-client-staging"
-  else
-    echo "auth-client-prod"
-  fi
+  # Single Firebase project for all environments (same as auth-provider)
+  echo "f3-nation-auth"
 }
 
 get_backend_id_for_env() {
@@ -83,10 +89,15 @@ process_environment() {
   local project_id=$(get_project_id_for_env "$env")
   local backend_id=$(get_backend_id_for_env "$env")
   local env_file=$(get_env_file_for_env "$env" "$project_root")
+  local secret_ids_str=$(get_secret_ids_for_env "$env")
+
+  # Convert space-separated string to array
+  read -ra SECRET_IDS <<< "$secret_ids_str"
 
   log_info "Using project ID: $project_id"
   log_info "Using backend ID: $backend_id"
   log_info "Using env file: $env_file"
+  log_info "Secret prefix: $(if [[ "$env" == "staging" ]]; then echo "staging-client-*"; else echo "client-*"; fi)"
 
   # Set GCP project for this environment
   log_step "Setting GCP project to '$project_id'..."

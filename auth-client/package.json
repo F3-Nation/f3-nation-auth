@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,mdx,css,scss,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,mdx,css,scss,yaml,yml}\"",
-    "firebase:secrets": "scripts/firebase-secrets.sh"
+    "firebase:secrets": "scripts/firebase-secrets.sh all",
+    "firebase:secrets:staging": "scripts/firebase-secrets.sh staging",
+    "firebase:secrets:prod": "scripts/firebase-secrets.sh prod"
   },
   "dependencies": {
     "f3-nation-auth-sdk": "^0.1.4",

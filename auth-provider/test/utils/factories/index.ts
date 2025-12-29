@@ -1,5 +1,5 @@
 // User factories
-export {
+import {
   createUserData,
   createMockUser,
   createUserProfileData,
@@ -7,16 +7,31 @@ export {
   resetUserCounter,
 } from './user.factory';
 
-// OAuth client factories
 export {
+  createUserData,
+  createMockUser,
+  createUserProfileData,
+  createMockUserProfile,
+  resetUserCounter,
+};
+
+// OAuth client factories
+import {
   createOAuthClientData,
   createMockOAuthClient,
   createOAuthClientDataWithMultipleRedirects,
   resetOAuthClientCounter,
 } from './oauth-client.factory';
 
-// Session factories
 export {
+  createOAuthClientData,
+  createMockOAuthClient,
+  createOAuthClientDataWithMultipleRedirects,
+  resetOAuthClientCounter,
+};
+
+// Session factories
+import {
   createSessionData,
   createMockSession,
   createExpiredSessionData,
@@ -24,8 +39,16 @@ export {
   resetSessionCounter,
 } from './session.factory';
 
-// Email MFA code factories
 export {
+  createSessionData,
+  createMockSession,
+  createExpiredSessionData,
+  createExpiringSessionData,
+  resetSessionCounter,
+};
+
+// Email MFA code factories
+import {
   generateVerificationCode,
   hashCode,
   createMfaCodeData,
@@ -35,16 +58,21 @@ export {
   resetMfaCodeCounter,
 } from './email-mfa-code.factory';
 
+export {
+  generateVerificationCode,
+  hashCode,
+  createMfaCodeData,
+  createMockMfaCode,
+  createExpiredMfaCodeData,
+  createConsumedMfaCodeData,
+  resetMfaCodeCounter,
+};
+
 /**
  * Reset all factory counters.
  * Call this in beforeEach() to ensure unique IDs across tests.
  */
 export function resetAllFactoryCounters(): void {
-  const { resetUserCounter } = require('./user.factory');
-  const { resetOAuthClientCounter } = require('./oauth-client.factory');
-  const { resetSessionCounter } = require('./session.factory');
-  const { resetMfaCodeCounter } = require('./email-mfa-code.factory');
-
   resetUserCounter();
   resetOAuthClientCounter();
   resetSessionCounter();

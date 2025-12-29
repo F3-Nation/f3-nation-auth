@@ -25,7 +25,7 @@ export default defineConfig({
 
     // Timeout settings
     testTimeout: 30000, // 30s for integration tests
-    hookTimeout: 30000,
+    hookTimeout: 120000, // 120s for database container startup
 
     // Coverage configuration
     coverage: {

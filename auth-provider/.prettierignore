@@ -33,5 +33,5 @@ yarn-error.log*
 .vercel
 .turbo 
 
-# Drizzle ORM
-drizzle/migrations
+# SQL Migrations
+migrations

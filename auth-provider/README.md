@@ -2,13 +2,13 @@
 
 ## Overview
 
-Central authentication service for F3 Nation applications using Next.js, NextAuth, and Drizzle ORM with PostgreSQL. This service provides email-based authentication with verification codes backed by PostgreSQL and delivered via SendGrid.
+Central authentication service for F3 Nation applications using Next.js, NextAuth, and PostgreSQL. This service provides email-based authentication with verification codes backed by PostgreSQL and delivered via SendGrid.
 
 ## Technical Stack
 
 - Next.js 15.4.4 with App Router
 - NextAuth 4.24.11 with custom email provider
-- Drizzle ORM 0.44.3
+- Raw PostgreSQL with type-safe repository pattern
 - PostgreSQL database
 - SendGrid for transactional email delivery
 - TailwindCSS for styling
@@ -17,7 +17,7 @@ Central authentication service for F3 Nation applications using Next.js, NextAut
 
 - **Email-based authentication** with verification codes
 - **Custom MFA store** with hashed codes persisted in PostgreSQL
-- **Database sessions** with Drizzle adapter
+- **JWT sessions** with custom NextAuth adapter
 - **OAuth provider** for other F3 Nation applications
 - **User onboarding** with F3 name and hospital name
 - **Session management** across subdomains
@@ -29,10 +29,12 @@ Central authentication service for F3 Nation applications using Next.js, NextAut
 auth-provider/
 ├── .env.local                    # Environment variables
 ├── package.json                  # Dependencies
-├── drizzle.config.ts            # Database configuration
 ├── db/
-│   ├── schema.ts                # Database schema
-│   └── index.ts                 # Database connection
+│   ├── index.ts                 # Database connection & repository exports
+│   ├── client.ts                # DatabaseClient class
+│   ├── types/                   # Type definitions
+│   └── repositories/            # Repository pattern implementation
+├── migrations/                   # SQL migration files
 ├── app/
 │   ├── page.tsx                 # Home page
 │   ├── login/
@@ -51,6 +53,7 @@ auth-provider/
 │       └── oauth/               # OAuth endpoints
 ├── lib/
 │   ├── auth.ts                  # NextAuth configuration
+│   ├── next-auth-adapter.ts     # Custom NextAuth adapter
 │   └── mfa/
 │       └── index.ts             # Email verification service
 └── components/
@@ -98,13 +101,7 @@ OAUTH_CLIENT_SECRET_AUTH_PROVIDER_PROD="your-auth-provider-prod-secret"
    # Edit .env.local with your actual values
    ```
 
-3. **Set up the database:**
-
-   ```bash
-   npm run db:push
-   ```
-
-4. **Start the development server:**
+3. **Start the development server:**
    ```bash
    npm run dev
    ```
@@ -114,17 +111,8 @@ The application will be available at `http://localhost:3000`.
 ## Database Commands
 
 ```bash
-# Generate migration files
-npm run db:generate
-
-# Push schema changes to database
-npm run db:push
-
-# Reset database (development only)
-npm run db:reset
-
-# Seed database with OAuth clients
-npm run db:seed
+# Deploy migrations to database
+npm run db:deploy
 ```
 
 ## Local Development Database
@@ -256,7 +244,7 @@ Environment variables are automatically loaded from Google Cloud Secret Manager 
 ## Security Features
 
 - **Email verification** required for all sign-ins
-- **Secure session management** with database storage
+- **Secure session management** with JWT tokens
 - **CSRF protection** built into NextAuth
 - **Secure cookies** with proper domain and security settings
 - **OAuth 2.0 compliance** with PKCE support

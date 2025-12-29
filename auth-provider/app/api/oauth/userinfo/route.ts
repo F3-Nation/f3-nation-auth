@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAccessToken, getUserInfo } from '@/lib/oauth';
-import { db } from '@/db';
-import { oauthClients } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { oauthClientRepository } from '@/db';
 
 interface TokenData {
   userId: number;
@@ -28,11 +26,7 @@ async function addCorsHeaders(
 
   // For non-OPTIONS requests, validate against client config
   if (origin && clientId) {
-    const [client] = await db
-      .select()
-      .from(oauthClients)
-      .where(eq(oauthClients.id, clientId))
-      .limit(1);
+    const client = await oauthClientRepository.findById(clientId);
     if (client && origin === client.allowedOrigin) {
       response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
       response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');

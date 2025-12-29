@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/db';
-import { users, userProfiles } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { userRepository, userProfileRepository } from '@/db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,34 +27,24 @@ export async function POST(request: NextRequest) {
     const firstName = words.join(' ');
 
     // Update the user's F3 name and first/last name in public.users
-    await db
-      .update(users)
-      .set({
-        f3Name: f3Name.trim(),
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        updated: new Date(),
-      })
-      .where(eq(users.id, session.user.id));
+    await userRepository.update(session.user.id, {
+      f3Name: f3Name.trim(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      updated: new Date(),
+    });
 
     // Update or create user profile in auth.user_profiles
-    const existingProfile = await db
-      .select()
-      .from(userProfiles)
-      .where(eq(userProfiles.userId, session.user.id))
-      .limit(1);
+    const existingProfile = await userProfileRepository.findByUserId(session.user.id);
 
-    if (existingProfile.length > 0) {
-      await db
-        .update(userProfiles)
-        .set({
-          hospitalName: hospitalName.trim(),
-          onboardingCompleted: true,
-          updatedAt: new Date(),
-        })
-        .where(eq(userProfiles.userId, session.user.id));
+    if (existingProfile) {
+      await userProfileRepository.update(session.user.id, {
+        hospitalName: hospitalName.trim(),
+        onboardingCompleted: true,
+        updatedAt: new Date(),
+      });
     } else {
-      await db.insert(userProfiles).values({
+      await userProfileRepository.create({
         userId: session.user.id,
         hospitalName: hospitalName.trim(),
         onboardingCompleted: true,

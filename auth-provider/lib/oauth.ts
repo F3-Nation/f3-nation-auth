@@ -1,12 +1,10 @@
-import { db } from '@/db';
 import {
-  oauthClients,
-  oauthAuthorizationCodes,
-  oauthAccessTokens,
-  oauthRefreshTokens,
-  users,
-} from '@/db/schema';
-import { eq, and, gt } from 'drizzle-orm';
+  userRepository,
+  oauthClientRepository,
+  oauthAuthorizationCodeRepository,
+  oauthAccessTokenRepository,
+  oauthRefreshTokenRepository,
+} from '@/db';
 import { randomBytes, createHash } from 'crypto';
 import { encodeState, decodeState } from './state-utils';
 
@@ -79,29 +77,23 @@ export async function validateClient(
   clientId: string,
   clientSecret?: string
 ): Promise<OAuthClient | null> {
-  const client = await db
-    .select()
-    .from(oauthClients)
-    .where(and(eq(oauthClients.id, clientId), eq(oauthClients.isActive, true)))
-    .limit(1);
+  const client = await oauthClientRepository.findActiveById(clientId);
 
-  if (!client.length) return null;
-
-  const clientData = client[0];
+  if (!client) return null;
 
   // If client secret is provided, validate it
-  if (clientSecret && clientData.clientSecret !== clientSecret) {
+  if (clientSecret && client.clientSecret !== clientSecret) {
     return null;
   }
 
   return {
-    id: clientData.id,
-    name: clientData.name,
-    clientSecret: clientData.clientSecret,
-    redirectUris: JSON.parse(clientData.redirectUris),
-    scopes: clientData.scopes.split(' '),
-    createdAt: clientData.createdAt,
-    isActive: clientData.isActive,
+    id: client.id,
+    name: client.name,
+    clientSecret: client.clientSecret,
+    redirectUris: JSON.parse(client.redirectUris),
+    scopes: client.scopes.split(' '),
+    createdAt: client.createdAt,
+    isActive: client.isActive,
   };
 }
 
@@ -127,14 +119,14 @@ export async function createAuthorizationCode(
   const code = generateSecureToken();
   const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-  await db.insert(oauthAuthorizationCodes).values({
+  await oauthAuthorizationCodeRepository.create({
     code,
     clientId,
     userId,
     redirectUri,
     scopes: scopes.join(' '),
-    codeChallenge,
-    codeChallengeMethod,
+    codeChallenge: codeChallenge ?? null,
+    codeChallengeMethod: codeChallengeMethod ?? null,
     expires,
   });
 
@@ -148,45 +140,32 @@ export async function validateAuthorizationCode(
   redirectUri: string,
   codeVerifier?: string
 ): Promise<{ userId: number; scopes: string[] } | null> {
-  const authCode = await db
-    .select()
-    .from(oauthAuthorizationCodes)
-    .where(
-      and(
-        eq(oauthAuthorizationCodes.code, code),
-        eq(oauthAuthorizationCodes.clientId, clientId),
-        eq(oauthAuthorizationCodes.redirectUri, redirectUri),
-        gt(oauthAuthorizationCodes.expires, new Date())
-      )
-    )
-    .limit(1);
+  const authCode = await oauthAuthorizationCodeRepository.findValid(code, clientId, redirectUri);
 
-  if (!authCode.length) return null;
-
-  const codeData = authCode[0];
+  if (!authCode) return null;
 
   // Validate PKCE if used
-  if (codeData.codeChallenge && codeData.codeChallengeMethod) {
+  if (authCode.codeChallenge && authCode.codeChallengeMethod) {
     if (!codeVerifier) return null;
 
     let challenge: string;
-    if (codeData.codeChallengeMethod === 'S256') {
+    if (authCode.codeChallengeMethod === 'S256') {
       challenge = createHash('sha256').update(codeVerifier).digest('base64url');
-    } else if (codeData.codeChallengeMethod === 'plain') {
+    } else if (authCode.codeChallengeMethod === 'plain') {
       challenge = codeVerifier;
     } else {
       return null;
     }
 
-    if (challenge !== codeData.codeChallenge) return null;
+    if (challenge !== authCode.codeChallenge) return null;
   }
 
   // Delete the authorization code (one-time use)
-  await db.delete(oauthAuthorizationCodes).where(eq(oauthAuthorizationCodes.code, code));
+  await oauthAuthorizationCodeRepository.delete(code);
 
   return {
-    userId: codeData.userId,
-    scopes: codeData.scopes.split(' '),
+    userId: authCode.userId,
+    scopes: authCode.scopes.split(' '),
   };
 }
 
@@ -203,7 +182,7 @@ export async function createAccessToken(
   const refreshExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
   // Insert access token
-  await db.insert(oauthAccessTokens).values({
+  await oauthAccessTokenRepository.create({
     token: accessToken,
     clientId,
     userId,
@@ -212,7 +191,7 @@ export async function createAccessToken(
   });
 
   // Insert refresh token
-  await db.insert(oauthRefreshTokens).values({
+  await oauthRefreshTokenRepository.create({
     token: refreshToken,
     accessToken,
     clientId,
@@ -227,19 +206,14 @@ export async function createAccessToken(
 export async function validateAccessToken(
   token: string
 ): Promise<{ userId: number; scopes: string[]; clientId: string } | null> {
-  const accessToken = await db
-    .select()
-    .from(oauthAccessTokens)
-    .where(and(eq(oauthAccessTokens.token, token), gt(oauthAccessTokens.expires, new Date())))
-    .limit(1);
+  const accessToken = await oauthAccessTokenRepository.findValid(token);
 
-  if (!accessToken.length) return null;
+  if (!accessToken) return null;
 
-  const tokenData = accessToken[0];
   return {
-    userId: tokenData.userId,
-    scopes: tokenData.scopes.split(' '),
-    clientId: tokenData.clientId,
+    userId: accessToken.userId,
+    scopes: accessToken.scopes.split(' '),
+    clientId: accessToken.clientId,
   };
 }
 
@@ -248,58 +222,41 @@ export async function refreshAccessToken(
   refreshToken: string,
   clientId: string
 ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number } | null> {
-  const refresh = await db
-    .select()
-    .from(oauthRefreshTokens)
-    .where(
-      and(
-        eq(oauthRefreshTokens.token, refreshToken),
-        eq(oauthRefreshTokens.clientId, clientId),
-        gt(oauthRefreshTokens.expires, new Date())
-      )
-    )
-    .limit(1);
+  const refresh = await oauthRefreshTokenRepository.findValid(refreshToken, clientId);
 
-  if (!refresh.length) return null;
-
-  const refreshData = refresh[0];
+  if (!refresh) return null;
 
   // Get the old access token to get scopes
-  const oldAccessToken = await db
-    .select()
-    .from(oauthAccessTokens)
-    .where(eq(oauthAccessTokens.token, refreshData.accessToken))
-    .limit(1);
+  const oldAccessToken = await oauthAccessTokenRepository.findByToken(refresh.accessToken);
 
-  if (!oldAccessToken.length) return null;
+  if (!oldAccessToken) return null;
 
-  const scopes = oldAccessToken[0].scopes.split(' ');
+  const scopes = oldAccessToken.scopes.split(' ');
 
   // Delete old tokens
-  await db.delete(oauthAccessTokens).where(eq(oauthAccessTokens.token, refreshData.accessToken));
-  await db.delete(oauthRefreshTokens).where(eq(oauthRefreshTokens.token, refreshToken));
+  await oauthAccessTokenRepository.delete(refresh.accessToken);
+  await oauthRefreshTokenRepository.delete(refreshToken);
 
   // Create new tokens
-  return await createAccessToken(clientId, refreshData.userId, scopes);
+  return await createAccessToken(clientId, refresh.userId, scopes);
 }
 
 // Get user info for token
 export async function getUserInfo(userId: number, scopes: string[]) {
-  const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  const user = await userRepository.findById(userId);
 
-  if (!user.length) return null;
+  if (!user) return null;
 
-  const userData = user[0];
   const userInfo: Record<string, unknown> = { sub: String(userId) };
 
   if (scopes.includes('profile')) {
-    userInfo.name = userData.f3Name;
-    userInfo.picture = userData.avatarUrl;
+    userInfo.name = user.f3Name;
+    userInfo.picture = user.avatarUrl;
   }
 
   if (scopes.includes('email')) {
-    userInfo.email = userData.email;
-    userInfo.email_verified = !!userData.emailVerified;
+    userInfo.email = user.email;
+    userInfo.email_verified = !!user.emailVerified;
   }
 
   return userInfo;
@@ -315,7 +272,7 @@ export async function registerClient(
   const clientId = generateSecureToken(16);
   const clientSecret = generateSecureToken(32);
 
-  await db.insert(oauthClients).values({
+  await oauthClientRepository.create({
     id: clientId,
     name,
     clientSecret,

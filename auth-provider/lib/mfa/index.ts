@@ -1,8 +1,5 @@
 import crypto from 'crypto';
-import { and, eq, isNull, desc } from 'drizzle-orm';
-
-import { db, pool } from '@/db';
-import { emailMfaCodes } from '@/db/schema';
+import { emailMfaCodeRepository } from '@/db';
 
 const CODE_TTL_MINUTES = 10;
 const SENDGRID_API_BASE = 'https://api.sendgrid.com/v3/mail/send';
@@ -102,27 +99,20 @@ export async function createEmailVerification(email: string, callbackUrl: string
 
   const codeHash = hashCode(code);
 
-  // Use raw SQL queries to bypass Drizzle's caching that conflicts with Next.js 15 tracing
-  const client = await pool.connect();
-  try {
-    // Clean up expired codes for all users to keep the table tidy
-    await client.query('DELETE FROM auth.email_mfa_codes WHERE expires_at < $1', [issuedAt]);
+  // Clean up expired codes for all users to keep the table tidy
+  await emailMfaCodeRepository.deleteExpired();
 
-    // Ensure only one active code exists per email address
-    await client.query(
-      'DELETE FROM auth.email_mfa_codes WHERE email = $1 AND consumed_at IS NULL',
-      [email]
-    );
+  // Ensure only one active code exists per email address
+  await emailMfaCodeRepository.deleteUnconsumedByEmail(email);
 
-    // Insert new verification code
-    await client.query(
-      `INSERT INTO auth.email_mfa_codes (id, email, code_hash, expires_at, attempt_count, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [verificationId, email, codeHash, expiresAt, 0, issuedAt]
-    );
-  } finally {
-    client.release();
-  }
+  // Insert new verification code
+  await emailMfaCodeRepository.create({
+    id: verificationId,
+    email,
+    codeHash,
+    expiresAt,
+    attemptCount: 0,
+  });
 
   const baseUrl = resolveBaseUrl();
   const magicLink = `${baseUrl}/login/email/verify?email=${encodeURIComponent(email)}&code=${encodeURIComponent(code)}&callbackUrl=${encodeURIComponent(callbackUrl)}`;
@@ -161,38 +151,24 @@ export async function verifyEmailCode(
     const now = new Date();
     const hashed = hashCode(code);
 
-    const [latest] = await db
-      .select()
-      .from(emailMfaCodes)
-      .where(and(eq(emailMfaCodes.email, email), isNull(emailMfaCodes.consumedAt)))
-      .orderBy(desc(emailMfaCodes.createdAt))
-      .limit(1);
+    const latest = await emailMfaCodeRepository.findLatestUnconsumed(email);
 
     if (!latest) {
       return false;
     }
 
     if (latest.expiresAt <= now) {
-      await db
-        .update(emailMfaCodes)
-        .set({ consumedAt: now })
-        .where(eq(emailMfaCodes.id, latest.id));
+      await emailMfaCodeRepository.markConsumed(latest.id);
       return false;
     }
 
     if (latest.codeHash !== hashed) {
-      await db
-        .update(emailMfaCodes)
-        .set({ attemptCount: latest.attemptCount + 1 })
-        .where(eq(emailMfaCodes.id, latest.id));
+      await emailMfaCodeRepository.incrementAttemptCount(latest.id);
       return false;
     }
 
     if (consumeCode) {
-      await db
-        .update(emailMfaCodes)
-        .set({ consumedAt: now })
-        .where(eq(emailMfaCodes.id, latest.id));
+      await emailMfaCodeRepository.markConsumed(latest.id);
     }
 
     return true;

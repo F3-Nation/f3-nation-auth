@@ -93,7 +93,7 @@ describe('POST /api/onboarding', () => {
     it('returns 400 when f3Name is missing', async () => {
       const repos = getTestRepositories();
       const userData = createUserData();
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -109,7 +109,7 @@ describe('POST /api/onboarding', () => {
     it('returns 400 when f3Name is empty string', async () => {
       const repos = getTestRepositories();
       const userData = createUserData();
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -125,7 +125,7 @@ describe('POST /api/onboarding', () => {
     it('returns 400 when f3Name is whitespace only', async () => {
       const repos = getTestRepositories();
       const userData = createUserData();
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -141,7 +141,7 @@ describe('POST /api/onboarding', () => {
     it('returns 400 when f3Name is not a string', async () => {
       const repos = getTestRepositories();
       const userData = createUserData();
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -157,7 +157,7 @@ describe('POST /api/onboarding', () => {
     it('returns 400 when hospitalName is missing', async () => {
       const repos = getTestRepositories();
       const userData = createUserData();
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -173,7 +173,7 @@ describe('POST /api/onboarding', () => {
     it('returns 400 when hospitalName is empty string', async () => {
       const repos = getTestRepositories();
       const userData = createUserData();
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -189,7 +189,7 @@ describe('POST /api/onboarding', () => {
     it('returns 400 when hospitalName is whitespace only', async () => {
       const repos = getTestRepositories();
       const userData = createUserData();
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -207,7 +207,7 @@ describe('POST /api/onboarding', () => {
     it('creates profile and updates user for new user', async () => {
       const repos = getTestRepositories();
       const userData = createUserData({ email: 'new@example.com' });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -223,13 +223,13 @@ describe('POST /api/onboarding', () => {
       expect(data.success).toBe(true);
 
       // Verify user was updated
-      const updatedUser = await repos.userRepository.findById(user.id);
+      const updatedUser = await repos.users.findById(user.id);
       expect(updatedUser?.f3Name).toBe('Maverick');
       expect(updatedUser?.firstName).toBe('Pete');
       expect(updatedUser?.lastName).toBe('Mitchell');
 
       // Verify profile was created
-      const profile = await repos.userProfileRepository.findByUserId(user.id);
+      const profile = await repos.userProfiles.findByUserId(user.id);
       expect(profile?.hospitalName).toBe('Pete Mitchell');
       expect(profile?.onboardingCompleted).toBe(true);
     });
@@ -237,10 +237,10 @@ describe('POST /api/onboarding', () => {
     it('updates existing profile for returning user', async () => {
       const repos = getTestRepositories();
       const userData = createUserData({ email: 'existing@example.com' });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       // Create existing profile
-      await repos.userProfileRepository.create({
+      await repos.userProfiles.create({
         userId: user.id,
         hospitalName: 'Old Name',
         onboardingCompleted: false,
@@ -260,7 +260,7 @@ describe('POST /api/onboarding', () => {
       expect(data.success).toBe(true);
 
       // Verify profile was updated
-      const profile = await repos.userProfileRepository.findByUserId(user.id);
+      const profile = await repos.userProfiles.findByUserId(user.id);
       expect(profile?.hospitalName).toBe('Tom Kazansky');
       expect(profile?.onboardingCompleted).toBe(true);
     });
@@ -268,7 +268,7 @@ describe('POST /api/onboarding', () => {
     it('parses single word hospital name correctly', async () => {
       const repos = getTestRepositories();
       const userData = createUserData({ email: 'single@example.com' });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -281,7 +281,7 @@ describe('POST /api/onboarding', () => {
 
       expect(response.status).toBe(200);
 
-      const updatedUser = await repos.userRepository.findById(user.id);
+      const updatedUser = await repos.users.findById(user.id);
       expect(updatedUser?.firstName).toBe('');
       expect(updatedUser?.lastName).toBe('Nick');
     });
@@ -289,7 +289,7 @@ describe('POST /api/onboarding', () => {
     it('parses multi-word hospital name correctly', async () => {
       const repos = getTestRepositories();
       const userData = createUserData({ email: 'multi@example.com' });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -302,7 +302,7 @@ describe('POST /api/onboarding', () => {
 
       expect(response.status).toBe(200);
 
-      const updatedUser = await repos.userRepository.findById(user.id);
+      const updatedUser = await repos.users.findById(user.id);
       expect(updatedUser?.firstName).toBe('Mike Metcalf');
       expect(updatedUser?.lastName).toBe('Jr');
     });
@@ -310,7 +310,7 @@ describe('POST /api/onboarding', () => {
     it('trims whitespace from inputs', async () => {
       const repos = getTestRepositories();
       const userData = createUserData({ email: 'trim@example.com' });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -323,10 +323,10 @@ describe('POST /api/onboarding', () => {
 
       expect(response.status).toBe(200);
 
-      const updatedUser = await repos.userRepository.findById(user.id);
+      const updatedUser = await repos.users.findById(user.id);
       expect(updatedUser?.f3Name).toBe('Maverick');
 
-      const profile = await repos.userProfileRepository.findByUserId(user.id);
+      const profile = await repos.userProfiles.findByUserId(user.id);
       expect(profile?.hospitalName).toBe('Pete Mitchell');
     });
   });
@@ -335,7 +335,7 @@ describe('POST /api/onboarding', () => {
     it('handles f3Name with special characters', async () => {
       const repos = getTestRepositories();
       const userData = createUserData({ email: 'special@example.com' });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -348,14 +348,14 @@ describe('POST /api/onboarding', () => {
 
       expect(response.status).toBe(200);
 
-      const updatedUser = await repos.userRepository.findById(user.id);
+      const updatedUser = await repos.users.findById(user.id);
       expect(updatedUser?.f3Name).toBe('Mav-2.0');
     });
 
     it('handles hospitalName with hyphenated last name', async () => {
       const repos = getTestRepositories();
       const userData = createUserData({ email: 'hyphen@example.com' });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, userData.email!);
       setMockSession(session);
@@ -368,7 +368,7 @@ describe('POST /api/onboarding', () => {
 
       expect(response.status).toBe(200);
 
-      const updatedUser = await repos.userRepository.findById(user.id);
+      const updatedUser = await repos.users.findById(user.id);
       expect(updatedUser?.firstName).toBe('Jean-Pierre');
       expect(updatedUser?.lastName).toBe('Smith-Jones');
     });

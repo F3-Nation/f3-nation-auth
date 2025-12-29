@@ -76,7 +76,7 @@ describe('POST /api/verify-email', () => {
       const repos = getTestRepositories();
       const mfaData = createMfaCodeData('test@example.com');
 
-      await repos.emailMfaCodeRepository.create({
+      await repos.emailMfaCodes.create({
         id: mfaData.id,
         email: mfaData.email,
         codeHash: mfaData.codeHash,
@@ -100,7 +100,7 @@ describe('POST /api/verify-email', () => {
       const repos = getTestRepositories();
       const mfaData = createMfaCodeData('test@example.com');
 
-      await repos.emailMfaCodeRepository.create({
+      await repos.emailMfaCodes.create({
         id: mfaData.id,
         email: mfaData.email,
         codeHash: mfaData.codeHash,
@@ -169,7 +169,7 @@ describe('POST /api/verify-email', () => {
       const repos = getTestRepositories();
       const mfaData = createMfaCodeData('test@example.com');
 
-      await repos.emailMfaCodeRepository.create({
+      await repos.emailMfaCodes.create({
         id: mfaData.id,
         email: mfaData.email,
         codeHash: mfaData.codeHash,
@@ -192,7 +192,7 @@ describe('POST /api/verify-email', () => {
       const repos = getTestRepositories();
       const mfaData = createExpiredMfaCodeData('test@example.com');
 
-      await repos.emailMfaCodeRepository.create({
+      await repos.emailMfaCodes.create({
         id: mfaData.id,
         email: mfaData.email,
         codeHash: mfaData.codeHash,
@@ -227,7 +227,7 @@ describe('POST /api/verify-email', () => {
       const repos = getTestRepositories();
       const mfaData = createMfaCodeData('user1@example.com');
 
-      await repos.emailMfaCodeRepository.create({
+      await repos.emailMfaCodes.create({
         id: mfaData.id,
         email: mfaData.email,
         codeHash: mfaData.codeHash,
@@ -252,7 +252,7 @@ describe('POST /api/verify-email', () => {
       const repos = getTestRepositories();
       const mfaData = createMfaCodeData('test@example.com');
 
-      await repos.emailMfaCodeRepository.create({
+      await repos.emailMfaCodes.create({
         id: mfaData.id,
         email: mfaData.email,
         codeHash: mfaData.codeHash,
@@ -269,7 +269,7 @@ describe('POST /api/verify-email', () => {
       );
 
       // Check attempt count was incremented
-      const code = await repos.emailMfaCodeRepository.findLatestUnconsumed('test@example.com');
+      const code = await repos.emailMfaCodes.findLatestUnconsumed('test@example.com');
       expect(code?.attemptCount).toBe(1);
     });
   });
@@ -298,7 +298,7 @@ describe('POST /api/verify-email', () => {
       const crypto = await import('crypto');
       const codeHash = crypto.createHash('sha256').update(code).digest('hex');
 
-      await repos.emailMfaCodeRepository.create({
+      await repos.emailMfaCodes.create({
         id: crypto.randomUUID(),
         email: 'test@example.com',
         codeHash,

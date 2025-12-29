@@ -74,17 +74,17 @@ describe('POST /api/oauth/token', () => {
       allowedOrigin: 'http://localhost:3001',
       scopes: 'openid profile email',
     });
-    await repos.oauthClientRepository.create(clientData);
+    await repos.oauthClients.create(clientData);
     return clientData;
   }
 
   async function setupUserWithAuthCode(clientId: string, redirectUri: string) {
     const repos = getTestRepositories();
     const userData = createUserData({ email: 'user@example.com' });
-    const user = await repos.userRepository.create(userData);
+    const user = await repos.users.create(userData);
 
     const code = 'test-auth-code-' + Date.now();
-    await repos.oauthAuthorizationCodeRepository.create({
+    await repos.oauthAuthorizationCodes.create({
       code,
       clientId,
       userId: user.id,
@@ -105,12 +105,12 @@ describe('POST /api/oauth/token', () => {
   ) {
     const repos = getTestRepositories();
     const userData = createUserData({ email: 'pkce@example.com' });
-    const user = await repos.userRepository.create(userData);
+    const user = await repos.users.create(userData);
 
     const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
     const code = 'pkce-auth-code-' + Date.now();
 
-    await repos.oauthAuthorizationCodeRepository.create({
+    await repos.oauthAuthorizationCodes.create({
       code,
       clientId,
       userId: user.id,

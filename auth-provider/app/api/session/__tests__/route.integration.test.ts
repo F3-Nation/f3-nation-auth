@@ -100,7 +100,7 @@ describe('GET /api/session', () => {
         f3Name: 'Maverick',
         email: 'maverick@example.com',
       });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       // Set mock session
       const session = createAuthenticatedSession(user.id, 'maverick@example.com');
@@ -123,10 +123,10 @@ describe('GET /api/session', () => {
         f3Name: 'Goose',
         email: 'goose@example.com',
       });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       // Create profile
-      await repos.userProfileRepository.create({
+      await repos.userProfiles.create({
         userId: user.id,
         hospitalName: 'Tom Kazansky',
         onboardingCompleted: true,
@@ -154,7 +154,7 @@ describe('GET /api/session', () => {
         f3Name: 'Iceman',
         email: 'iceman@example.com',
       });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, 'iceman@example.com');
       setMockSession(session);
@@ -174,7 +174,7 @@ describe('GET /api/session', () => {
       const repos = getTestRepositories();
 
       const userData = createUserData({ email: 'test@example.com' });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, 'test@example.com');
       setMockSession(session);
@@ -192,7 +192,7 @@ describe('GET /api/session', () => {
         f3Name: 'TestF3',
         email: 'merge@example.com',
       });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       // Create session with some initial user data
       const session = createAuthenticatedSession(user.id, 'merge@example.com', {
@@ -215,7 +215,7 @@ describe('GET /api/session', () => {
       const repos = getTestRepositories();
 
       const userData = createUserData({ email: 'noemail@example.com' });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const session = createAuthenticatedSession(user.id, '');
       setMockSession(session);

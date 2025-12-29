@@ -24,6 +24,7 @@ import {
   clearGlobalRepositories,
   createDbMockFactory,
 } from '@/test/utils/db-mock';
+import { generateAuthorizationState } from '@/lib/oauth';
 
 // Store the GET function reference
 let GET: typeof import('../route').GET;
@@ -84,18 +85,18 @@ describe('GET /api/oauth/authorize', () => {
       allowedOrigin: 'http://localhost:3001',
       scopes: 'openid profile email',
     });
-    await repos.oauthClientRepository.create(clientData);
+    await repos.oauthClients.create(clientData);
     return clientData;
   }
 
   async function setupUserAndSession(onboarded = true) {
     const repos = getTestRepositories();
     const userData = createUserData({ email: 'user@example.com', f3Name: 'TestUser' });
-    const user = await repos.userRepository.create(userData);
+    const user = await repos.users.create(userData);
 
     if (onboarded) {
       // Create profile for onboarded user
-      await repos.userProfileRepository.create({
+      await repos.userProfiles.create({
         userId: user.id,
         hospitalName: 'Test Hospital',
         onboardingCompleted: true,
@@ -193,7 +194,7 @@ describe('GET /api/oauth/authorize', () => {
       const clientData = createOAuthClientData({
         isActive: false,
       });
-      await repos.oauthClientRepository.create(clientData);
+      await repos.oauthClients.create(clientData);
 
       const request = createRequest({
         response_type: 'code',
@@ -304,17 +305,24 @@ describe('GET /api/oauth/authorize', () => {
       const client = await setupOAuthClient();
       await setupUserAndSession(true);
 
+      // Generate a valid encoded state
+      const state = generateAuthorizationState(
+        'test-csrf-token',
+        client.id,
+        'http://localhost:3001/callback'
+      );
+
       const request = createRequest({
         response_type: 'code',
         client_id: client.id,
         redirect_uri: 'http://localhost:3001/callback',
-        state: 'my-state-value',
+        state,
       });
       const response = await GET(request);
 
       expect(response.status).toBe(307);
       const location = response.headers.get('location');
-      expect(location).toContain('state=my-state-value');
+      expect(location).toContain(`state=${encodeURIComponent(state)}`);
     });
 
     it('stores authorization code in database', async () => {
@@ -328,13 +336,18 @@ describe('GET /api/oauth/authorize', () => {
         redirect_uri: 'http://localhost:3001/callback',
         scope: 'openid profile',
       });
-      await GET(request);
+      const response = await GET(request);
+
+      // Extract the code from the redirect URL
+      const location = response.headers.get('location')!;
+      const url = new URL(location);
+      const code = url.searchParams.get('code')!;
 
       // Find the authorization code in the database
-      const codes = await repos.oauthAuthorizationCodeRepository.findByClientId(client.id);
-      expect(codes.length).toBeGreaterThan(0);
-      expect(codes[0].userId).toBe(user.id);
-      expect(codes[0].redirectUri).toBe('http://localhost:3001/callback');
+      const authCode = await repos.oauthAuthorizationCodes.findByCode(code);
+      expect(authCode).not.toBeNull();
+      expect(authCode!.userId).toBe(user.id);
+      expect(authCode!.redirectUri).toBe('http://localhost:3001/callback');
     });
 
     it('supports PKCE with code_challenge', async () => {
@@ -353,10 +366,15 @@ describe('GET /api/oauth/authorize', () => {
 
       expect(response.status).toBe(307);
 
+      // Extract the code from the redirect URL
+      const location = response.headers.get('location')!;
+      const url = new URL(location);
+      const code = url.searchParams.get('code')!;
+
       // Verify code challenge was stored
-      const codes = await repos.oauthAuthorizationCodeRepository.findByClientId(client.id);
-      expect(codes[0].codeChallenge).toBe('test-challenge');
-      expect(codes[0].codeChallengeMethod).toBe('S256');
+      const authCode = await repos.oauthAuthorizationCodes.findByCode(code);
+      expect(authCode!.codeChallenge).toBe('test-challenge');
+      expect(authCode!.codeChallengeMethod).toBe('S256');
     });
   });
 

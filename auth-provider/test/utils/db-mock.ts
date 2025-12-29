@@ -73,5 +73,7 @@ export function createDbMockFactory() {
     dbClient: undefined,
     // Provide a no-op for ensureSequenceSynced
     ensureSequenceSynced: async () => {},
+    // Provide getRepositories for the adapter
+    getRepositories: () => globalThis.__testDbRepositories,
   });
 }

@@ -88,7 +88,7 @@ describe('/api/oauth/userinfo', () => {
       allowedOrigin: 'http://localhost:3001',
       scopes: 'openid profile email',
     });
-    await repos.oauthClientRepository.create(clientData);
+    await repos.oauthClients.create(clientData);
     return clientData;
   }
 
@@ -102,15 +102,15 @@ describe('/api/oauth/userinfo', () => {
       email: 'testuser@example.com',
       avatarUrl: 'https://example.com/avatar.jpg',
     });
-    const user = await repos.userRepository.create(userData);
+    const user = await repos.users.create(userData);
 
     // Mark email as verified
-    await repos.userRepository.update(user.id, {
+    await repos.users.update(user.id, {
       emailVerified: new Date(),
     });
 
     const token = 'valid-access-token-' + Date.now();
-    await repos.oauthAccessTokenRepository.create({
+    await repos.oauthAccessTokens.create({
       token,
       clientId,
       userId: user.id,
@@ -124,15 +124,15 @@ describe('/api/oauth/userinfo', () => {
   async function setupUserWithExpiredToken(clientId: string) {
     const repos = getTestRepositories();
     const userData = createUserData({ email: 'expired@example.com' });
-    const user = await repos.userRepository.create(userData);
+    const user = await repos.users.create(userData);
 
     const token = 'expired-access-token-' + Date.now();
-    await repos.oauthAccessTokenRepository.create({
+    await repos.oauthAccessTokens.create({
       token,
       clientId,
       userId: user.id,
       scopes: 'openid profile email',
-      expires: new Date(Date.now() - 1000), // Expired
+      expires: new Date(Date.now() - 60 * 60 * 1000), // Expired 1 hour ago (avoid clock skew issues)
     });
 
     return { user, token };
@@ -264,33 +264,22 @@ describe('/api/oauth/userinfo', () => {
       });
     });
 
-    describe('user not found', () => {
-      it('returns 500 when user is deleted after token creation', async () => {
+    describe('user deleted', () => {
+      it('returns 401 when user is deleted (token cascade deleted)', async () => {
         const repos = getTestRepositories();
         const client = await setupOAuthClient();
         const { user, token } = await setupUserWithAccessToken(client.id);
 
-        // Delete user after creating token (simulates edge case)
-        // First, delete related access tokens and then user
-        await repos.oauthAccessTokenRepository.delete(token);
+        // Delete user - tokens are cascade deleted due to FK constraint
+        await repos.users.delete(user.id);
 
-        // Now create a token for non-existent user
-        const fakeToken = 'fake-token-' + Date.now();
-        await repos.oauthAccessTokenRepository.create({
-          token: fakeToken,
-          clientId: client.id,
-          userId: 99999, // Non-existent user
-          scopes: 'openid profile email',
-          expires: new Date(Date.now() + 60 * 60 * 1000),
-        });
-
-        const request = createGetRequest(fakeToken);
+        // Token should no longer be valid since it was cascade deleted
+        const request = createGetRequest(token);
         const response = await GET(request);
         const data = await response.json();
 
-        expect(response.status).toBe(500);
-        expect(data.error).toBe('server_error');
-        expect(data.error_description).toBe('User not found');
+        expect(response.status).toBe(401);
+        expect(data.error).toBe('invalid_token');
       });
     });
 
@@ -351,10 +340,10 @@ describe('/api/oauth/userinfo', () => {
         email: 'noavatar@example.com',
         avatarUrl: null,
       });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
 
       const token = 'no-avatar-token-' + Date.now();
-      await repos.oauthAccessTokenRepository.create({
+      await repos.oauthAccessTokens.create({
         token,
         clientId: client.id,
         userId: user.id,
@@ -377,11 +366,11 @@ describe('/api/oauth/userinfo', () => {
         f3Name: 'Unverified',
         email: 'unverified@example.com',
       });
-      const user = await repos.userRepository.create(userData);
+      const user = await repos.users.create(userData);
       // Note: emailVerified is null by default
 
       const token = 'unverified-token-' + Date.now();
-      await repos.oauthAccessTokenRepository.create({
+      await repos.oauthAccessTokens.create({
         token,
         clientId: client.id,
         userId: user.id,

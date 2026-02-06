@@ -13,11 +13,11 @@ main() {
   
   # Get project root and file paths
   local project_root=$(get_project_root)
-  local env_file="$project_root/.env.firebase"
+  local env_file="$project_root/.env.prod"
 
   # Hardcoded Firebase config
   local project_id="f3-nation-auth"
-  local backend_id="f3-nation-auth-provider"
+  local backend_id="auth-provider-prod"
 
   log_info "Using project ID: $project_id"
   log_info "Using backend ID: $backend_id"
@@ -81,25 +81,25 @@ log_step() {
 # ENVIRONMENT VALIDATION FUNCTIONS (used by main)
 #####################################
 
-# Validate .env.firebase file exists
+# Validate .env.prod file exists
 validate_env_file() {
   local env_file="$1"
   
   if [[ ! -f "$env_file" ]]; then
-    log_error ".env.firebase file not found at $env_file"
+    log_error ".env.prod file not found at $env_file"
     log_error "Please create this file with your environment variables."
     log_error "Required variables: DATABASE_URL, NEXTAUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, OAUTH_CLIENT_SECRET_*, etc."
     return 1
   fi
   
-  log_success "Found .env.firebase file: $env_file"
+  log_success "Found .env.prod file: $env_file"
 }
 
-# Load environment variables from .env.firebase
+# Load environment variables from .env.prod
 load_environment_variables() {
   local env_file="$1"
   
-  log_step "Loading environment variables from .env.firebase..."
+  log_step "Loading environment variables from .env.prod..."
   
   # Read and process each line to trim whitespace and avoid sourcing issues
   while IFS= read -r line || [[ -n "$line" ]]; do
@@ -134,15 +134,15 @@ validate_environment_variables() {
     local value="${!envvar:-}"
     
     if [[ -z "$value" ]]; then
-      log_error "$envvar is not set in .env.firebase"
-      log_error "Please add $envvar=your_value to your .env.firebase file"
+      log_error "$envvar is not set in .env.prod"
+      log_error "Please add $envvar=your_value to your .env.prod file"
       return 1
     fi
     
     # Check if variable contains placeholder values
     if [[ "$value" == *"YOUR_"* ]] || [[ "$value" == *"your-"* ]]; then
       log_warning "$envvar appears to contain placeholder values."
-      log_error "Please update it with your actual value in .env.firebase"
+      log_error "Please update it with your actual value in .env.prod"
       return 1
     fi
     
@@ -210,6 +210,37 @@ get_current_secret_value() {
   fi
 }
 
+# Disable old secret versions (keep only the latest enabled)
+# Uses disable instead of destroy so in-progress deployments can still read
+# the previous version. Disabled versions can be destroyed later if needed.
+disable_old_secret_versions() {
+  local project_id="$1"
+  local secret_id="$2"
+
+  local versions
+  versions=$(gcloud secrets versions list "$secret_id" \
+    --project="$project_id" \
+    --filter='state=ENABLED' \
+    --sort-by=~createTime \
+    --format='value(name)' 2>/dev/null) || return 0
+
+  [[ -z "$versions" ]] && return 0
+
+  # Skip the first (newest) version, disable the rest
+  local skip=true
+  while IFS= read -r version; do
+    if [[ "$skip" == true ]]; then
+      skip=false
+      continue
+    fi
+    log_info "Disabling old version $version of '$secret_id'..."
+    gcloud secrets versions disable "$version" \
+      --secret="$secret_id" \
+      --project="$project_id" \
+      --quiet 2>/dev/null || log_warning "Failed to disable version $version of '$secret_id'"
+  done <<< "$versions"
+}
+
 # Create or update secrets in Google Cloud Secret Manager only if different
 create_or_update_secrets() {
   local project_id="$1"
@@ -250,6 +281,9 @@ create_or_update_secrets() {
         --data-file="$temp_file" \
         --project="$project_id" \
         --quiet
+
+      # Disable old versions to keep only the latest enabled
+      disable_old_secret_versions "$project_id" "$secret_id"
     else
       log_info "Creating secret '$secret_id' ($envvar)…"
       gcloud secrets create "$secret_id" \
@@ -290,7 +324,7 @@ grant_firebase_access() {
   for i in "${!SECRET_VARS[@]}"; do
     local secret_id="${SECRET_IDS[$i]}"
     log_info "Granting Firebase App Hosting access to '$secret_id' on backend '$backend_id'…"
-    firebase apphosting:secrets:grantaccess "$secret_id" \
+    npx -y -p firebase-tools firebase apphosting:secrets:grantaccess "$secret_id" \
       --backend "$backend_id" \
       --project "$project_id" \
       --non-interactive

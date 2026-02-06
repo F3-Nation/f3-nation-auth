@@ -101,7 +101,13 @@ async function main() {
   if (existing.length > 0) {
     // --- UPDATE mode ---
     const client = existing[0];
-    const parsedUris: string[] = JSON.parse(client.redirectUris);
+    let parsedUris: string[];
+    try {
+      parsedUris = JSON.parse(client.redirectUris);
+    } catch {
+      console.error(`ERROR: Client "${client.name}" has malformed redirect_uris in DB: ${client.redirectUris}`);
+      process.exit(1);
+    }
 
     console.log(`\nFound existing client "${client.name}" (ID: ${client.id})`);
     console.log(`  Redirect URIs: ${parsedUris.join(', ')}`);

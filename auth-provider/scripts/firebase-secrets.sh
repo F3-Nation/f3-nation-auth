@@ -210,6 +210,35 @@ get_current_secret_value() {
   fi
 }
 
+# Delete old secret versions (keep only the latest)
+delete_old_secret_versions() {
+  local project_id="$1"
+  local secret_id="$2"
+
+  local versions
+  versions=$(gcloud secrets versions list "$secret_id" \
+    --project="$project_id" \
+    --filter='state!=DESTROYED' \
+    --sort-by=~createTime \
+    --format='value(name)' 2>/dev/null) || return 0
+
+  [[ -z "$versions" ]] && return 0
+
+  # Skip the first (newest) version, destroy the rest
+  local skip=true
+  while IFS= read -r version; do
+    if [[ "$skip" == true ]]; then
+      skip=false
+      continue
+    fi
+    log_info "Destroying old version $version of '$secret_id'..."
+    gcloud secrets versions destroy "$version" \
+      --secret="$secret_id" \
+      --project="$project_id" \
+      --quiet 2>/dev/null || log_warning "Failed to destroy version $version of '$secret_id'"
+  done <<< "$versions"
+}
+
 # Create or update secrets in Google Cloud Secret Manager only if different
 create_or_update_secrets() {
   local project_id="$1"
@@ -250,6 +279,9 @@ create_or_update_secrets() {
         --data-file="$temp_file" \
         --project="$project_id" \
         --quiet
+
+      # Delete old versions to keep only the latest
+      delete_old_secret_versions "$project_id" "$secret_id"
     else
       log_info "Creating secret '$secret_id' ($envvar)…"
       gcloud secrets create "$secret_id" \

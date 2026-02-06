@@ -290,7 +290,7 @@ grant_firebase_access() {
   for i in "${!SECRET_VARS[@]}"; do
     local secret_id="${SECRET_IDS[$i]}"
     log_info "Granting Firebase App Hosting access to '$secret_id' on backend '$backend_id'…"
-    npx firebase apphosting:secrets:grantaccess "$secret_id" \
+    npx -y -p firebase-tools firebase apphosting:secrets:grantaccess "$secret_id" \
       --backend "$backend_id" \
       --project "$project_id" \
       --non-interactive

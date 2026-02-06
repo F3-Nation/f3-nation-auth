@@ -77,7 +77,9 @@ async function main() {
   console.log('\n=== F3 Nation Auth — Add/Update OAuth Client ===\n');
 
   if (envFlag === 'prod') {
-    const proceed = await promptYesNo('WARNING: You are connecting to the PRODUCTION database. Continue?');
+    const proceed = await promptYesNo(
+      'WARNING: You are connecting to the PRODUCTION database. Continue?'
+    );
     if (!proceed) {
       console.log('Aborted.');
       process.exit(0);
@@ -95,7 +97,9 @@ async function main() {
   const existing = await db.select().from(oauthClients).where(eq(oauthClients.name, name));
 
   if (existing.length > 1) {
-    console.error(`ERROR: Multiple clients found with name "${name}" (IDs: ${existing.map(c => c.id).join(', ')}).`);
+    console.error(
+      `ERROR: Multiple clients found with name "${name}" (IDs: ${existing.map(c => c.id).join(', ')}).`
+    );
     console.error('Please resolve the duplicate names in the database before using this script.');
     process.exit(1);
   }
@@ -113,7 +117,9 @@ async function main() {
     try {
       parsedUris = JSON.parse(client.redirectUris);
     } catch {
-      console.error(`ERROR: Client "${client.name}" has malformed redirect_uris in DB: ${client.redirectUris}`);
+      console.error(
+        `ERROR: Client "${client.name}" has malformed redirect_uris in DB: ${client.redirectUris}`
+      );
       process.exit(1);
     }
 

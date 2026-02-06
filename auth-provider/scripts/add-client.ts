@@ -76,6 +76,14 @@ async function main() {
 
   console.log('\n=== F3 Nation Auth — Add/Update OAuth Client ===\n');
 
+  if (envFlag === 'prod') {
+    const proceed = await promptYesNo('WARNING: You are connecting to the PRODUCTION database. Continue?');
+    if (!proceed) {
+      console.log('Aborted.');
+      process.exit(0);
+    }
+  }
+
   // --- Step 1: Get client name ---
   const name = await prompt('Client name');
   if (!name) {

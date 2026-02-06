@@ -84,7 +84,13 @@ async function main() {
   }
 
   // --- Step 2: Check if client exists ---
-  const existing = await db.select().from(oauthClients).where(eq(oauthClients.name, name)).limit(1);
+  const existing = await db.select().from(oauthClients).where(eq(oauthClients.name, name));
+
+  if (existing.length > 1) {
+    console.error(`ERROR: Multiple clients found with name "${name}" (IDs: ${existing.map(c => c.id).join(', ')}).`);
+    console.error('Please resolve the duplicate names in the database before using this script.');
+    process.exit(1);
+  }
 
   let mode: 'CREATE' | 'UPDATE';
   let clientId: string;

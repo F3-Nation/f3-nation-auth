@@ -13,6 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
+    "db:add-client": "tsx scripts/add-client.ts",
     "firebase:secrets": "scripts/firebase-secrets.sh"
   },
   "dependencies": {
@@ -30,16 +31,17 @@
   },
   "devDependencies": {
     "@types/base64-url": "^2.2.2",
-    "@types/dotenv": "^8.2.0",
     "@types/node": "^20",
     "@types/pg": "^8.15.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "bun": "^1.0.0",
+    "dotenv": "^16.4.7",
     "drizzle-kit": "^0.31.4",
     "eslint": "9.32.0",
     "eslint-config-next": "15.4.5",
     "prettier": "^3.6.2",
+    "tsx": "^4.19.0",
     "typescript": "^5"
   }
 }

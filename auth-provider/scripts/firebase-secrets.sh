@@ -13,7 +13,7 @@ main() {
   
   # Get project root and file paths
   local project_root=$(get_project_root)
-  local env_file="$project_root/.env.firebase"
+  local env_file="$project_root/.env.prod"
 
   # Hardcoded Firebase config
   local project_id="f3-nation-auth"
@@ -81,25 +81,25 @@ log_step() {
 # ENVIRONMENT VALIDATION FUNCTIONS (used by main)
 #####################################
 
-# Validate .env.firebase file exists
+# Validate .env.prod file exists
 validate_env_file() {
   local env_file="$1"
   
   if [[ ! -f "$env_file" ]]; then
-    log_error ".env.firebase file not found at $env_file"
+    log_error ".env.prod file not found at $env_file"
     log_error "Please create this file with your environment variables."
     log_error "Required variables: DATABASE_URL, NEXTAUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, OAUTH_CLIENT_SECRET_*, etc."
     return 1
   fi
   
-  log_success "Found .env.firebase file: $env_file"
+  log_success "Found .env.prod file: $env_file"
 }
 
-# Load environment variables from .env.firebase
+# Load environment variables from .env.prod
 load_environment_variables() {
   local env_file="$1"
   
-  log_step "Loading environment variables from .env.firebase..."
+  log_step "Loading environment variables from .env.prod..."
   
   # Read and process each line to trim whitespace and avoid sourcing issues
   while IFS= read -r line || [[ -n "$line" ]]; do
@@ -134,15 +134,15 @@ validate_environment_variables() {
     local value="${!envvar:-}"
     
     if [[ -z "$value" ]]; then
-      log_error "$envvar is not set in .env.firebase"
-      log_error "Please add $envvar=your_value to your .env.firebase file"
+      log_error "$envvar is not set in .env.prod"
+      log_error "Please add $envvar=your_value to your .env.prod file"
       return 1
     fi
     
     # Check if variable contains placeholder values
     if [[ "$value" == *"YOUR_"* ]] || [[ "$value" == *"your-"* ]]; then
       log_warning "$envvar appears to contain placeholder values."
-      log_error "Please update it with your actual value in .env.firebase"
+      log_error "Please update it with your actual value in .env.prod"
       return 1
     fi
     

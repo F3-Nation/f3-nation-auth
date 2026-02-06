@@ -1,12 +1,12 @@
 import { config } from 'dotenv';
 import path from 'path';
-import { randomBytes } from 'crypto';
 import { createInterface } from 'readline/promises';
 import { stdin, stdout } from 'process';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { eq } from 'drizzle-orm';
 import { oauthClients } from '../db/schema';
+import { generateSecureToken } from '../lib/oauth';
 
 // --- Parse --env flag ---
 const envFlag = (() => {
@@ -133,7 +133,7 @@ async function main() {
 
     const rawId = await prompt('Client ID (Enter to auto-generate)');
     if (!rawId) {
-      clientId = randomBytes(8).toString('hex');
+      clientId = generateSecureToken(16);
     } else {
       if (!validateClientId(rawId)) {
         console.error(
@@ -192,7 +192,7 @@ async function main() {
   }
 
   // --- Step 4: Generate secret and upsert ---
-  const clientSecret = randomBytes(32).toString('base64url');
+  const clientSecret = generateSecureToken(32);
 
   if (mode === 'CREATE') {
     await db.insert(oauthClients).values({

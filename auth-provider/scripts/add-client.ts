@@ -106,8 +106,8 @@ async function main() {
     // --- CREATE mode ---
     mode = 'CREATE';
 
-    const rawId = await prompt('Client ID', 'auto-generate');
-    if (rawId === 'auto-generate' || rawId === '') {
+    const rawId = await prompt('Client ID (Enter to auto-generate)');
+    if (!rawId) {
       clientId = randomBytes(8).toString('hex');
     } else {
       if (!validateClientId(rawId)) {

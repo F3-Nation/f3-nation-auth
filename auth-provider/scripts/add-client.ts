@@ -46,6 +46,24 @@ function validateClientId(id: string): boolean {
   return /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(id);
 }
 
+function isValidRedirectUri(uri: string): boolean {
+  try {
+    const u = new URL(uri);
+    return u.protocol === 'https:' || u.hostname === 'localhost';
+  } catch {
+    return false;
+  }
+}
+
+function validateRedirectUris(uris: string[]): void {
+  const invalid = uris.filter(u => !isValidRedirectUri(u));
+  if (invalid.length > 0) {
+    console.error(`ERROR: Invalid redirect URI(s): ${invalid.join(', ')}`);
+    console.error('Redirect URIs must be valid HTTPS URLs (or localhost for development).');
+    process.exit(1);
+  }
+}
+
 async function main() {
   // Test DB connection
   try {
@@ -99,6 +117,7 @@ async function main() {
       .split(',')
       .map(u => u.trim())
       .filter(Boolean);
+    validateRedirectUris(redirectUris);
 
     allowedOrigin = await prompt('Allowed origin', client.allowedOrigin);
     scopes = await prompt('Scopes', client.scopes);
@@ -140,6 +159,7 @@ async function main() {
       console.error('ERROR: At least one redirect URI is required.');
       process.exit(1);
     }
+    validateRedirectUris(redirectUris);
 
     allowedOrigin = await prompt('Allowed origin');
     if (!allowedOrigin) {

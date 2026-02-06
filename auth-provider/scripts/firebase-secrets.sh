@@ -210,32 +210,34 @@ get_current_secret_value() {
   fi
 }
 
-# Delete old secret versions (keep only the latest)
-delete_old_secret_versions() {
+# Disable old secret versions (keep only the latest enabled)
+# Uses disable instead of destroy so in-progress deployments can still read
+# the previous version. Disabled versions can be destroyed later if needed.
+disable_old_secret_versions() {
   local project_id="$1"
   local secret_id="$2"
 
   local versions
   versions=$(gcloud secrets versions list "$secret_id" \
     --project="$project_id" \
-    --filter='state!=DESTROYED' \
+    --filter='state=ENABLED' \
     --sort-by=~createTime \
     --format='value(name)' 2>/dev/null) || return 0
 
   [[ -z "$versions" ]] && return 0
 
-  # Skip the first (newest) version, destroy the rest
+  # Skip the first (newest) version, disable the rest
   local skip=true
   while IFS= read -r version; do
     if [[ "$skip" == true ]]; then
       skip=false
       continue
     fi
-    log_info "Destroying old version $version of '$secret_id'..."
-    gcloud secrets versions destroy "$version" \
+    log_info "Disabling old version $version of '$secret_id'..."
+    gcloud secrets versions disable "$version" \
       --secret="$secret_id" \
       --project="$project_id" \
-      --quiet 2>/dev/null || log_warning "Failed to destroy version $version of '$secret_id'"
+      --quiet 2>/dev/null || log_warning "Failed to disable version $version of '$secret_id'"
   done <<< "$versions"
 }
 
@@ -280,8 +282,8 @@ create_or_update_secrets() {
         --project="$project_id" \
         --quiet
 
-      # Delete old versions to keep only the latest
-      delete_old_secret_versions "$project_id" "$secret_id"
+      # Disable old versions to keep only the latest enabled
+      disable_old_secret_versions "$project_id" "$secret_id"
     else
       log_info "Creating secret '$secret_id' ($envvar)…"
       gcloud secrets create "$secret_id" \

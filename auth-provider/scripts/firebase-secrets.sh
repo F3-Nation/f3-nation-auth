@@ -17,7 +17,7 @@ main() {
 
   # Hardcoded Firebase config
   local project_id="f3-nation-auth"
-  local backend_id="f3-nation-auth-provider"
+  local backend_id="auth-provider-prod"
 
   log_info "Using project ID: $project_id"
   log_info "Using backend ID: $backend_id"

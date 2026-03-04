@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/db';
-import { oauthClients } from '@/db/schema';
-import { eq } from 'drizzle-orm';
 import {
   validateClient,
   validateRedirectUri,
@@ -13,6 +10,7 @@ import {
   validateAuthorizationState,
   type AuthorizationRequest,
 } from '@/lib/oauth';
+import { addCorsHeaders } from '@/lib/cors';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -105,21 +103,7 @@ export async function GET(request: NextRequest) {
 
       // Create a redirect response with proper headers for cross-origin requests
       const response = NextResponse.redirect(loginUrl.toString());
-      const origin = request.headers.get('origin');
-      if (origin) {
-        const [client] = await db
-          .select()
-          .from(oauthClients)
-          .where(eq(oauthClients.id, authRequest.client_id))
-          .limit(1);
-        if (client && origin === client.allowedOrigin) {
-          response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
-          response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-          response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-          response.headers.set('Access-Control-Allow-Credentials', 'true');
-        }
-      }
-      return response;
+      return addCorsHeaders(response, request.headers.get('origin'), authRequest.client_id);
     }
     // Check if user has completed onboarding (has f3Name and hospitalName)
     if (!session.user.f3Name || !session.user.hospitalName || !session.user.onboardingCompleted) {
@@ -137,14 +121,7 @@ export async function GET(request: NextRequest) {
 
       // Create a redirect response with proper headers for cross-origin requests
       const response = NextResponse.redirect(onboardingUrl.toString());
-      const origin = request.headers.get('origin');
-      if (origin) {
-        response.headers.set('Access-Control-Allow-Origin', origin);
-        response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-        response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-        response.headers.set('Access-Control-Allow-Credentials', 'true');
-      }
-      return response;
+      return addCorsHeaders(response, request.headers.get('origin'), authRequest.client_id);
     }
 
     // User is authenticated and has completed onboarding, create authorization code
@@ -178,21 +155,7 @@ export async function GET(request: NextRequest) {
     }
 
     const response = NextResponse.redirect(redirectUrl.toString());
-    const origin = request.headers.get('origin');
-    if (origin) {
-      const [client] = await db
-        .select()
-        .from(oauthClients)
-        .where(eq(oauthClients.id, authRequest.client_id))
-        .limit(1);
-      if (client && origin === client.allowedOrigin) {
-        response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
-        response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-        response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-        response.headers.set('Access-Control-Allow-Credentials', 'true');
-      }
-    }
-    return response;
+    return addCorsHeaders(response, request.headers.get('origin'), authRequest.client_id);
   } catch (error) {
     console.error('OAuth authorization error:', error);
 
@@ -205,21 +168,7 @@ export async function GET(request: NextRequest) {
         errorUrl.searchParams.set('state', authRequest.state);
       }
       const response = NextResponse.redirect(errorUrl.toString());
-      const origin = request.headers.get('origin');
-      if (origin) {
-        const [client] = await db
-          .select()
-          .from(oauthClients)
-          .where(eq(oauthClients.id, authRequest.client_id))
-          .limit(1);
-        if (client && origin === client.allowedOrigin) {
-          response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
-          response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-          response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-          response.headers.set('Access-Control-Allow-Credentials', 'true');
-        }
-      }
-      return response;
+      return addCorsHeaders(response, request.headers.get('origin'), authRequest.client_id);
     } catch {
       // If redirect_uri is invalid, return JSON error
       return NextResponse.json(

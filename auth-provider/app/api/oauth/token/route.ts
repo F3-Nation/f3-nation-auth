@@ -6,31 +6,10 @@ import {
   refreshAccessToken,
   type TokenRequest,
 } from '@/lib/oauth';
-import { db } from '@/db';
-import { oauthClients } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-
-// Add CORS headers
-async function addCorsHeaders(response: NextResponse, origin: string | null, clientId?: string) {
-  if (origin && clientId) {
-    const [client] = await db
-      .select()
-      .from(oauthClients)
-      .where(eq(oauthClients.id, clientId))
-      .limit(1);
-    if (client && origin === client.allowedOrigin) {
-      response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
-      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      response.headers.set('Access-Control-Allow-Credentials', 'true');
-    }
-  }
-  return response;
-}
+import { handlePreflight, addCorsHeaders } from '@/lib/cors';
 
 export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('Origin');
-  return await addCorsHeaders(new NextResponse(null, { status: 200 }), origin);
+  return handlePreflight(request);
 }
 
 export async function POST(request: NextRequest) {

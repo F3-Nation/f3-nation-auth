@@ -242,11 +242,9 @@ async function main() {
   console.log(`  Client Secret: ${clientSecret}`);
   console.log('\n  Save the client secret now — it cannot be retrieved later.');
   console.log('\n  Next steps:');
-  console.log(`  1. Add "${allowedOrigin}" to ALLOWED_ORIGINS in auth-provider env`);
   console.log(
-    '  2. Set OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET, OAUTH_REDIRECT_URI in the consumer app'
+    '  1. Set OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET, OAUTH_REDIRECT_URI in the consumer app\n'
   );
-  console.log('  3. Redeploy auth-provider if ALLOWED_ORIGINS changed\n');
 }
 
 main()

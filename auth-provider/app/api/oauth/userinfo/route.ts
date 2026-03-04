@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAccessToken, getUserInfo } from '@/lib/oauth';
-import { db } from '@/db';
-import { oauthClients } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { handlePreflight, addCorsHeaders } from '@/lib/cors';
 
 interface TokenData {
   userId: string;
@@ -10,42 +8,8 @@ interface TokenData {
   scopes: string[];
 }
 
-// Add CORS headers
-async function addCorsHeaders(
-  response: NextResponse,
-  origin: string | null,
-  clientId?: string,
-  isOptions = false
-) {
-  // Always set CORS headers for OPTIONS requests
-  if (isOptions && origin) {
-    response.headers.set('Access-Control-Allow-Origin', origin);
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    response.headers.set('Access-Control-Allow-Credentials', 'true');
-    return response;
-  }
-
-  // For non-OPTIONS requests, validate against client config
-  if (origin && clientId) {
-    const [client] = await db
-      .select()
-      .from(oauthClients)
-      .where(eq(oauthClients.id, clientId))
-      .limit(1);
-    if (client && origin === client.allowedOrigin) {
-      response.headers.set('Access-Control-Allow-Origin', client.allowedOrigin);
-      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      response.headers.set('Access-Control-Allow-Credentials', 'true');
-    }
-  }
-  return response;
-}
-
 export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('Origin');
-  return await addCorsHeaders(new NextResponse(null, { status: 200 }), origin, undefined, true);
+  return handlePreflight(request);
 }
 
 export async function GET(request: NextRequest) {
@@ -76,8 +40,7 @@ export async function GET(request: NextRequest) {
           { error: 'invalid_token', error_description: 'Invalid or expired access token' },
           { status: 401 }
         ),
-        origin,
-        undefined
+        origin
       );
     }
 

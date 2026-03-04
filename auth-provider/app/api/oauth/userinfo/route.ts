@@ -15,6 +15,8 @@ export async function OPTIONS(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const origin = request.headers.get('Origin');
   try {
+    // Note: error responses before token validation use the broad origin check
+    // because clientId is only known after validating the access token.
     // Extract access token from Authorization header
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

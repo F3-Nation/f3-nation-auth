@@ -73,6 +73,9 @@ export async function addCorsHeaders(
   if (!origin) return response;
 
   if (clientId) {
+    // Fast reject: skip per-client DB query if origin isn't registered by any client
+    if (!(await isAllowedOrigin(origin))) return response;
+
     // Strict per-client validation
     const [client] = await db
       .select({ allowedOrigin: oauthClients.allowedOrigin })

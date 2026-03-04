@@ -47,8 +47,3 @@ env:
     availability:
       - BUILD
       - RUNTIME
-  - variable: ALLOWED_ORIGINS
-    secret: provider-allowed-origins
-    availability:
-      - BUILD
-      - RUNTIME

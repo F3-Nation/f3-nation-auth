@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Configuration constants
-SECRET_VARS=("DATABASE_URL" "NEXTAUTH_SECRET" "NEXTAUTH_URL" "NEXT_PUBLIC_NEXTAUTH_URL" "TWILIO_SENDGRID_API_KEY" "TWILIO_SENDGRID_TEMPLATE_ID" "EMAIL_VERIFICATION_SENDER" "NODE_ENV" "ALLOWED_ORIGINS")
-SECRET_IDS=("provider-database-url" "provider-nextauth-secret" "provider-nextauth-url" "provider-next-public-nextauth-url" "provider-twilio-sendgrid-api-key" "provider-twilio-sendgrid-template-id" "provider-email-verification-sender" "provider-node-env" "provider-allowed-origins")
+SECRET_VARS=("DATABASE_URL" "NEXTAUTH_SECRET" "NEXTAUTH_URL" "NEXT_PUBLIC_NEXTAUTH_URL" "TWILIO_SENDGRID_API_KEY" "TWILIO_SENDGRID_TEMPLATE_ID" "EMAIL_VERIFICATION_SENDER" "NODE_ENV")
+SECRET_IDS=("provider-database-url" "provider-nextauth-secret" "provider-nextauth-url" "provider-next-public-nextauth-url" "provider-twilio-sendgrid-api-key" "provider-twilio-sendgrid-template-id" "provider-email-verification-sender" "provider-node-env")
 
 #####################################
 # MAIN EXECUTION FUNCTION

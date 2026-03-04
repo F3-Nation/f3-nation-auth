@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
           { error: 'invalid_client', error_description: 'Invalid client credentials' },
           { status: 401 }
         ),
-        origin
+        origin,
+        tokenRequest.client_id
       );
     }
 
@@ -59,7 +60,8 @@ export async function POST(request: NextRequest) {
             { error: 'invalid_request', error_description: 'Missing code or redirect_uri' },
             { status: 400 }
           ),
-          origin
+          origin,
+          tokenRequest.client_id
         );
       }
 
@@ -77,7 +79,8 @@ export async function POST(request: NextRequest) {
             { error: 'invalid_grant', error_description: 'Invalid authorization code' },
             { status: 400 }
           ),
-          origin
+          origin,
+          tokenRequest.client_id
         );
       }
 
@@ -107,7 +110,8 @@ export async function POST(request: NextRequest) {
             { error: 'invalid_request', error_description: 'Missing refresh_token' },
             { status: 400 }
           ),
-          origin
+          origin,
+          tokenRequest.client_id
         );
       }
 
@@ -119,7 +123,8 @@ export async function POST(request: NextRequest) {
             { error: 'invalid_grant', error_description: 'Invalid refresh token' },
             { status: 400 }
           ),
-          origin
+          origin,
+          tokenRequest.client_id
         );
       }
 
@@ -139,7 +144,8 @@ export async function POST(request: NextRequest) {
           { error: 'unsupported_grant_type', error_description: 'Grant type not supported' },
           { status: 400 }
         ),
-        origin
+        origin,
+        tokenRequest.client_id
       );
     }
   } catch (error) {

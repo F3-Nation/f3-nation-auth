@@ -210,12 +210,14 @@ get_current_secret_value() {
   fi
 }
 
-# Disable old secret versions (keep only the latest enabled)
-# Uses disable instead of destroy so in-progress deployments can still read
-# the previous version. Disabled versions can be destroyed later if needed.
+# Disable old secret versions (keep the 3 most recent enabled)
+# Firebase App Hosting pins deployments to specific secret versions,
+# so we must keep recent versions enabled to avoid breaking active
+# or rolling-back deployments. Only disable versions beyond the 3 most recent.
 disable_old_secret_versions() {
   local project_id="$1"
   local secret_id="$2"
+  local keep=3
 
   local versions
   versions=$(gcloud secrets versions list "$secret_id" \
@@ -226,11 +228,11 @@ disable_old_secret_versions() {
 
   [[ -z "$versions" ]] && return 0
 
-  # Skip the first (newest) version, disable the rest
-  local skip=true
+  # Skip the N most recent versions, disable the rest
+  local count=0
   while IFS= read -r version; do
-    if [[ "$skip" == true ]]; then
-      skip=false
+    count=$((count + 1))
+    if [[ $count -le $keep ]]; then
       continue
     fi
     log_info "Disabling old version $version of '$secret_id'..."

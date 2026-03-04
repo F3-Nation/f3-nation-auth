@@ -9,19 +9,27 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 let cachedOrigins: Set<string> | null = null;
 let cacheTimestamp = 0;
+let pendingRefresh: Promise<Set<string>> | null = null;
 
 /** Returns the set of all allowed origins from active OAuth clients, cached for 5 minutes. */
 async function getAllowedOrigins(): Promise<Set<string>> {
-  const now = Date.now();
-  if (cachedOrigins && now - cacheTimestamp < CACHE_TTL_MS) {
+  if (cachedOrigins && Date.now() - cacheTimestamp < CACHE_TTL_MS) {
     return cachedOrigins;
   }
 
-  const clients = await db.select({ allowedOrigin: oauthClients.allowedOrigin }).from(oauthClients);
+  if (!pendingRefresh) {
+    pendingRefresh = db
+      .select({ allowedOrigin: oauthClients.allowedOrigin })
+      .from(oauthClients)
+      .then(clients => {
+        cachedOrigins = new Set(clients.map(c => c.allowedOrigin));
+        cacheTimestamp = Date.now();
+        pendingRefresh = null;
+        return cachedOrigins;
+      });
+  }
 
-  cachedOrigins = new Set(clients.map(c => c.allowedOrigin));
-  cacheTimestamp = now;
-  return cachedOrigins;
+  return pendingRefresh;
 }
 
 /** Checks if the origin belongs to any registered OAuth client. */

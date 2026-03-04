@@ -55,6 +55,7 @@ export async function handlePreflight(request: NextRequest): Promise<NextRespons
     setCorsHeaders(response.headers, origin);
   }
 
+  // Intentional: unrecognized origins get no CORS headers — browser blocks the request.
   return response;
 }
 

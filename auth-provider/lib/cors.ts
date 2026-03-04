@@ -26,6 +26,11 @@ async function getAllowedOrigins(): Promise<Set<string>> {
         cacheTimestamp = Date.now();
         pendingRefresh = null;
         return cachedOrigins;
+      })
+      .catch(err => {
+        // Clear pending so the next call retries instead of returning a rejected promise
+        pendingRefresh = null;
+        throw err;
       });
   }
 

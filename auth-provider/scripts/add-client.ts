@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import path from 'path';
 import { createInterface } from 'readline/promises';
 import { stdin, stdout } from 'process';
-import { Pool } from 'pg';
+import { Client } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { eq } from 'drizzle-orm';
 import { oauthClients } from '../db/schema';
@@ -24,8 +24,8 @@ if (!process.env.DATABASE_URL) {
 }
 
 // --- Standalone DB connection (not importing db/index.ts) ---
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const db = drizzle(pool);
+const client = new Client({ connectionString: process.env.DATABASE_URL });
+const db = drizzle(client);
 
 const rl = createInterface({ input: stdin, output: stdout });
 
@@ -65,9 +65,10 @@ function validateRedirectUris(uris: string[]): void {
 }
 
 async function main() {
-  // Test DB connection
+  // Connect and set search_path to the auth schema
   try {
-    await pool.query('SELECT 1');
+    await client.connect();
+    await client.query('SET search_path TO auth, public');
   } catch (err) {
     console.error(`ERROR: Could not connect to database using ${envFile}`);
     console.error((err as Error).message);
@@ -250,9 +251,11 @@ async function main() {
 main()
   .catch(err => {
     console.error('ERROR:', err.message || err);
+    if (err.cause) console.error('CAUSE:', err.cause.message || err.cause);
+    if (err.stack) console.error('STACK:', err.stack);
     process.exit(1);
   })
   .finally(async () => {
     rl.close();
-    await pool.end();
+    await client.end();
   });

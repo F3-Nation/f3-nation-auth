@@ -7,6 +7,8 @@ import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import SignOutButton from './components/SignOutButton';
 
+export const dynamic = 'force-dynamic';
+
 interface User {
   name: string;
   email: string;

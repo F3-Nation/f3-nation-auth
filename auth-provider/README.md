@@ -70,6 +70,7 @@ NEXTAUTH_URL="http://localhost:3000"
 # Database
 DATABASE_URL="your-postgresql-connection-string"
 DB_CONNECTION_MODE="direct" # "direct" (default) or "connector"
+DB_SCHEMA="public" # PostgreSQL schema/search_path
 
 # Required when DB_CONNECTION_MODE=connector
 CLOUD_SQL_CONNECTION_NAME="project:region:instance"

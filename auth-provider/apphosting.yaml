@@ -13,6 +13,11 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  - variable: DB_SCHEMA
+    secret: provider-db-schema
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: DATABASE_URL
     secret: provider-database-url
     availability:

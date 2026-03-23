@@ -3,6 +3,7 @@
 # Configuration constants
 SECRET_VARS=(
   "DB_CONNECTION_MODE"
+  "DB_SCHEMA"
   "DATABASE_URL"
   "CLOUD_SQL_CONNECTION_NAME"
   "DB_USER"
@@ -19,6 +20,7 @@ SECRET_VARS=(
 )
 SECRET_IDS=(
   "provider-db-connection-mode"
+  "provider-db-schema"
   "provider-database-url"
   "provider-cloud-sql-connection-name"
   "provider-db-user"
@@ -162,6 +164,7 @@ validate_environment_variables() {
   local mode="${DB_CONNECTION_MODE:-direct}"
   local required_vars=(
     "DB_CONNECTION_MODE"
+    "DB_SCHEMA"
     "NEXTAUTH_SECRET"
     "NEXTAUTH_URL"
     "NEXT_PUBLIC_NEXTAUTH_URL"

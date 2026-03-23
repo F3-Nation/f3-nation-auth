@@ -4,6 +4,30 @@ import { Connector, IpAddressTypes } from '@google-cloud/cloud-sql-connector';
 import * as schema from './schema';
 
 let connector: Connector | null = null;
+let poolPromise: Promise<Pool> | null = null;
+
+function getSearchPath(): string {
+  const raw = process.env.DB_SCHEMA ?? 'public';
+  const schemas = raw
+    .split(',')
+    .map(schema => schema.trim())
+    .filter(Boolean);
+
+  if (schemas.length === 0) {
+    throw new Error('DB_SCHEMA must include at least one schema name.');
+  }
+
+  const validSchemaName = /^[A-Za-z_][A-Za-z0-9_]*$/;
+  for (const schema of schemas) {
+    if (!validSchemaName.test(schema)) {
+      throw new Error(
+        'DB_SCHEMA contains invalid schema names. Use comma-separated schema names with letters, numbers, and underscores only.'
+      );
+    }
+  }
+
+  return schemas.map(schema => `"${schema}"`).join(',');
+}
 
 async function createCloudSqlPool(): Promise<Pool> {
   const instanceConnectionName = process.env.CLOUD_SQL_CONNECTION_NAME;
@@ -27,12 +51,14 @@ async function createCloudSqlPool(): Promise<Pool> {
     instanceConnectionName,
     ipType: ipAddressType,
   });
+  const searchPath = getSearchPath();
 
   return new Pool({
     ...clientOpts,
     user: dbUser,
     password: dbPassword,
     database: dbName,
+    options: `-c search_path=${searchPath}`,
   });
 }
 
@@ -43,7 +69,8 @@ function createDirectPool(): Pool {
     throw new Error('DATABASE_URL is missing. Cannot connect to the database.');
   }
 
-  return new Pool({ connectionString });
+  const searchPath = getSearchPath();
+  return new Pool({ connectionString, options: `-c search_path=${searchPath}` });
 }
 
 async function createPool(): Promise<Pool> {
@@ -51,33 +78,37 @@ async function createPool(): Promise<Pool> {
   return mode === 'connector' ? createCloudSqlPool() : createDirectPool();
 }
 
-const poolPromise = createPool();
+async function getPool(): Promise<Pool> {
+  if (!poolPromise) {
+    poolPromise = createPool();
+    poolPromise
+      .then(pool => {
+        pool.on('error', err => {
+          console.error('Unexpected error on idle PostgreSQL client:', err);
+        });
+      })
+      .catch(err => {
+        console.error('Failed to initialize PostgreSQL pool:', err);
+      });
+  }
+
+  return poolPromise;
+}
 
 const poolProxy = {
   async query(...args: Parameters<Pool['query']>) {
-    const pool = await poolPromise;
+    const pool = await getPool();
     return pool.query(...args);
   },
   async connect(...args: Parameters<Pool['connect']>) {
-    const pool = await poolPromise;
+    const pool = await getPool();
     return pool.connect(...args);
   },
   async end(...args: Parameters<Pool['end']>) {
-    const pool = await poolPromise;
+    const pool = await getPool();
     return pool.end(...args);
   },
 } as unknown as Pool;
-
-poolPromise
-  .then(pool => {
-    pool.on('error', err => {
-      console.error('Unexpected error on idle PostgreSQL client:', err);
-    });
-  })
-  .catch(err => {
-    console.error('Failed to initialize PostgreSQL pool:', err);
-    process.exit(1);
-  });
 
 async function closeConnector() {
   if (connector) {

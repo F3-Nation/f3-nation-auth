@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^0.8.2",
+    "@google-cloud/cloud-sql-connector": "^1.9.2",
     "@tailwindcss/postcss": "^4",
     "base64-url": "^2.3.3",
     "drizzle-orm": "^0.44.3",

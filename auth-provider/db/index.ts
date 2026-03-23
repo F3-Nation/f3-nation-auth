@@ -8,25 +8,25 @@ let poolPromise: Promise<Pool> | null = null;
 
 function getSearchPath(): string {
   const raw = process.env.DB_SCHEMA ?? 'public';
-  const schemas = raw
+  const schemaNames = raw
     .split(',')
-    .map(schema => schema.trim())
+    .map(schemaName => schemaName.trim())
     .filter(Boolean);
 
-  if (schemas.length === 0) {
+  if (schemaNames.length === 0) {
     throw new Error('DB_SCHEMA must include at least one schema name.');
   }
 
   const validSchemaName = /^[A-Za-z_][A-Za-z0-9_]*$/;
-  for (const schema of schemas) {
-    if (!validSchemaName.test(schema)) {
+  for (const schemaName of schemaNames) {
+    if (!validSchemaName.test(schemaName)) {
       throw new Error(
         'DB_SCHEMA contains invalid schema names. Use comma-separated schema names with letters, numbers, and underscores only.'
       );
     }
   }
 
-  return schemas.map(schema => `"${schema}"`).join(',');
+  return schemaNames.map(schemaName => `"${schemaName}"`).join(',');
 }
 
 async function createCloudSqlPool(): Promise<Pool> {

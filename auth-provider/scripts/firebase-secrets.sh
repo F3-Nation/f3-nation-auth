@@ -172,7 +172,7 @@ validate_environment_variables() {
   )
 
   if [[ "$mode" == "connector" ]]; then
-    required_vars+=("CLOUD_SQL_CONNECTION_NAME" "DB_USER" "DB_NAME")
+    required_vars+=("CLOUD_SQL_CONNECTION_NAME" "DB_USER" "DB_PASSWORD" "DB_NAME")
   else
     required_vars+=("DATABASE_URL")
   fi

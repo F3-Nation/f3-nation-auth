@@ -11,9 +11,9 @@ async function createCloudSqlPool(): Promise<Pool> {
   const dbPassword = process.env.DB_PASSWORD;
   const dbName = process.env.DB_NAME;
 
-  if (!instanceConnectionName || !dbUser || !dbName) {
+  if (!instanceConnectionName || !dbUser || !dbPassword || !dbName) {
     throw new Error(
-      'Cloud SQL Connector requires CLOUD_SQL_CONNECTION_NAME, DB_USER, and DB_NAME.'
+      'Cloud SQL Connector requires CLOUD_SQL_CONNECTION_NAME, DB_USER, DB_PASSWORD, and DB_NAME.'
     );
   }
 
@@ -51,14 +51,51 @@ async function createPool(): Promise<Pool> {
   return mode === 'connector' ? createCloudSqlPool() : createDirectPool();
 }
 
-const pool = await createPool();
+const poolPromise = createPool();
 
-pool.on('error', err => {
-  console.error('Unexpected error on idle PostgreSQL client:', err);
+const poolProxy = {
+  async query(...args: Parameters<Pool['query']>) {
+    const pool = await poolPromise;
+    return pool.query(...args);
+  },
+  async connect(...args: Parameters<Pool['connect']>) {
+    const pool = await poolPromise;
+    return pool.connect(...args);
+  },
+  async end(...args: Parameters<Pool['end']>) {
+    const pool = await poolPromise;
+    return pool.end(...args);
+  },
+} as unknown as Pool;
+
+poolPromise
+  .then(pool => {
+    pool.on('error', err => {
+      console.error('Unexpected error on idle PostgreSQL client:', err);
+    });
+  })
+  .catch(err => {
+    console.error('Failed to initialize PostgreSQL pool:', err);
+    process.exit(1);
+  });
+
+async function closeConnector() {
+  if (connector) {
+    await connector.close();
+    connector = null;
+  }
+}
+
+process.once('SIGTERM', () => {
+  void closeConnector();
+});
+
+process.once('SIGINT', () => {
+  void closeConnector();
 });
 
 // Use drizzle to wrap the PG pool with schema types
-export const db = drizzle(pool, { schema });
+export const db = drizzle(poolProxy, { schema });
 
 // Export the database type for use in adapters
 export type DB = typeof db;

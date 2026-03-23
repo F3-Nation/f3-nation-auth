@@ -29,6 +29,20 @@ function getSearchPath(): string {
   return schemaNames.map(schemaName => `"${schemaName}"`).join(',');
 }
 
+function hasSearchPathInConnectionString(connectionString: string): boolean {
+  try {
+    const parsed = new URL(connectionString);
+    if (parsed.searchParams.has('search_path') || parsed.searchParams.has('currentSchema')) {
+      return true;
+    }
+
+    const options = parsed.searchParams.get('options');
+    return options ? /\bsearch_path\s*=/.test(decodeURIComponent(options)) : false;
+  } catch {
+    return false;
+  }
+}
+
 async function createCloudSqlPool(): Promise<Pool> {
   const instanceConnectionName = process.env.CLOUD_SQL_CONNECTION_NAME;
   const dbUser = process.env.DB_USER;
@@ -70,6 +84,10 @@ function createDirectPool(): Pool {
   }
 
   const searchPath = getSearchPath();
+  if (hasSearchPathInConnectionString(connectionString)) {
+    return new Pool({ connectionString });
+  }
+
   return new Pool({ connectionString, options: `-c search_path=${searchPath}` });
 }
 

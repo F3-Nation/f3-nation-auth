@@ -69,6 +69,15 @@ NEXTAUTH_URL="http://localhost:3000"
 
 # Database
 DATABASE_URL="your-postgresql-connection-string"
+DB_CONNECTION_MODE="direct" # "direct" (default) or "connector"
+DB_SCHEMA="public" # PostgreSQL schema/search_path
+
+# Required when DB_CONNECTION_MODE=connector
+CLOUD_SQL_CONNECTION_NAME="project:region:instance"
+DB_USER="your-db-user"
+DB_PASSWORD="your-db-password"
+DB_NAME="your-db-name"
+CLOUD_SQL_IP_TYPE="PUBLIC" # PUBLIC or PRIVATE
 
 # Email Verification
 TWILIO_SENDGRID_API_KEY="your-sendgrid-api-key"

@@ -8,8 +8,43 @@ runConfig:
 
 # Environment variables and secrets.
 env:
+  - variable: DB_CONNECTION_MODE
+    secret: provider-db-connection-mode
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: DB_SCHEMA
+    secret: provider-db-schema
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: DATABASE_URL
     secret: provider-database-url
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: CLOUD_SQL_CONNECTION_NAME
+    secret: provider-cloud-sql-connection-name
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: DB_USER
+    secret: provider-db-user
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: DB_PASSWORD
+    secret: provider-db-password
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: DB_NAME
+    secret: provider-db-name
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: CLOUD_SQL_IP_TYPE
+    secret: provider-cloud-sql-ip-type
     availability:
       - BUILD
       - RUNTIME

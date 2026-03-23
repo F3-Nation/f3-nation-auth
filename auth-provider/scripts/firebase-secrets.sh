@@ -1,8 +1,38 @@
 #!/usr/bin/env bash
 
 # Configuration constants
-SECRET_VARS=("DATABASE_URL" "NEXTAUTH_SECRET" "NEXTAUTH_URL" "NEXT_PUBLIC_NEXTAUTH_URL" "TWILIO_SENDGRID_API_KEY" "TWILIO_SENDGRID_TEMPLATE_ID" "EMAIL_VERIFICATION_SENDER" "NODE_ENV")
-SECRET_IDS=("provider-database-url" "provider-nextauth-secret" "provider-nextauth-url" "provider-next-public-nextauth-url" "provider-twilio-sendgrid-api-key" "provider-twilio-sendgrid-template-id" "provider-email-verification-sender" "provider-node-env")
+SECRET_VARS=(
+  "DB_CONNECTION_MODE"
+  "DATABASE_URL"
+  "CLOUD_SQL_CONNECTION_NAME"
+  "DB_USER"
+  "DB_PASSWORD"
+  "DB_NAME"
+  "CLOUD_SQL_IP_TYPE"
+  "NEXTAUTH_SECRET"
+  "NEXTAUTH_URL"
+  "NEXT_PUBLIC_NEXTAUTH_URL"
+  "TWILIO_SENDGRID_API_KEY"
+  "TWILIO_SENDGRID_TEMPLATE_ID"
+  "EMAIL_VERIFICATION_SENDER"
+  "NODE_ENV"
+)
+SECRET_IDS=(
+  "provider-db-connection-mode"
+  "provider-database-url"
+  "provider-cloud-sql-connection-name"
+  "provider-db-user"
+  "provider-db-password"
+  "provider-db-name"
+  "provider-cloud-sql-ip-type"
+  "provider-nextauth-secret"
+  "provider-nextauth-url"
+  "provider-next-public-nextauth-url"
+  "provider-twilio-sendgrid-api-key"
+  "provider-twilio-sendgrid-template-id"
+  "provider-email-verification-sender"
+  "provider-node-env"
+)
 
 #####################################
 # MAIN EXECUTION FUNCTION
@@ -88,7 +118,7 @@ validate_env_file() {
   if [[ ! -f "$env_file" ]]; then
     log_error ".env.prod file not found at $env_file"
     log_error "Please create this file with your environment variables."
-    log_error "Required variables: DATABASE_URL, NEXTAUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, OAUTH_CLIENT_SECRET_*, etc."
+    log_error "Required variables: DB_CONNECTION_MODE, NEXTAUTH_SECRET, NEXTAUTH_URL, and other runtime secrets."
     return 1
   fi
   
@@ -129,35 +159,61 @@ load_environment_variables() {
 validate_environment_variables() {
   log_step "Validating required environment variables..."
   
-  for i in "${!SECRET_VARS[@]}"; do
-    local envvar="${SECRET_VARS[$i]}"
+  local mode="${DB_CONNECTION_MODE:-direct}"
+  local required_vars=(
+    "DB_CONNECTION_MODE"
+    "NEXTAUTH_SECRET"
+    "NEXTAUTH_URL"
+    "NEXT_PUBLIC_NEXTAUTH_URL"
+    "TWILIO_SENDGRID_API_KEY"
+    "TWILIO_SENDGRID_TEMPLATE_ID"
+    "EMAIL_VERIFICATION_SENDER"
+    "NODE_ENV"
+  )
+
+  if [[ "$mode" == "connector" ]]; then
+    required_vars+=("CLOUD_SQL_CONNECTION_NAME" "DB_USER" "DB_NAME")
+  else
+    required_vars+=("DATABASE_URL")
+  fi
+
+  for envvar in "${required_vars[@]}"; do
     local value="${!envvar:-}"
-    
+
     if [[ -z "$value" ]]; then
       log_error "$envvar is not set in .env.prod"
       log_error "Please add $envvar=your_value to your .env.prod file"
       return 1
     fi
-    
+
     # Check if variable contains placeholder values
     if [[ "$value" == *"YOUR_"* ]] || [[ "$value" == *"your-"* ]]; then
       log_warning "$envvar appears to contain placeholder values."
       log_error "Please update it with your actual value in .env.prod"
       return 1
     fi
-    
+
     # Check for problematic whitespace or newlines
     if [[ "$value" =~ ^[[:space:]] ]] || [[ "$value" =~ [[:space:]]$ ]]; then
       log_warning "$envvar has leading or trailing whitespace - this will be automatically trimmed"
     fi
-    
+
     if [[ "$value" =~ $'\n' ]] || [[ "$value" =~ $'\r' ]]; then
       log_warning "$envvar contains newlines or carriage returns - these will be automatically removed"
     fi
-    
+
     # Show cleaned value length for debugging
     local cleaned_value=$(echo "$value" | tr -d '\n\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     log_success "Found: $envvar (${#cleaned_value} chars after cleaning)"
+  done
+
+  local optional_vars=("DATABASE_URL" "CLOUD_SQL_CONNECTION_NAME" "DB_USER" "DB_PASSWORD" "DB_NAME" "CLOUD_SQL_IP_TYPE")
+  for envvar in "${optional_vars[@]}"; do
+    if [[ -n "${!envvar:-}" ]]; then
+      local optional_cleaned
+      optional_cleaned=$(echo "${!envvar}" | tr -d '\n\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      log_success "Found optional: $envvar (${#optional_cleaned} chars after cleaning)"
+    fi
   done
 }
 

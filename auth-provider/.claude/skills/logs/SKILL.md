@@ -2,7 +2,7 @@
 name: logs
 description: Query Cloud Run logs for the f3-auth deployment. Use when the user wants to check auth service logs, errors, or request patterns in staging or prod.
 metadata:
-  version: '1.0.0'
+  version: '2.0.0'
   argument-hint: '[prod|staging] [errors|warnings] [count] [timerange]'
 ---
 
@@ -22,57 +22,31 @@ Query Cloud Run logs for the **f3-auth** deployment.
 
 ## Instructions
 
-When the user runs this command, fetch and display recent Cloud Run logs. The first positional argument selects the environment. Default to **staging** if omitted.
+When the user runs this skill, use the helper scripts in `scripts/` to fetch and format logs. Pass through all user arguments verbatim.
 
-### Argument Parsing
+### Step 1 — Fetch logs
 
-Parse arguments in any order:
-
-| Argument            | Example                         | Effect                                  |
-| ------------------- | ------------------------------- | --------------------------------------- |
-| `staging` or `prod` | `/logs prod`                    | Select environment (default: `staging`) |
-| `errors`            | `/logs errors`                  | Filter to `severity>=ERROR`             |
-| `warnings`          | `/logs warnings`                | Filter to `severity>=WARNING`           |
-| A bare number       | `/logs 50`                      | Limit to N entries (default: 20)        |
-| `<N>m`              | `/logs 30m`                     | Logs from last N minutes                |
-| `<N>h`              | `/logs 2h`                      | Logs from last N hours                  |
-| `<N>d`              | `/logs 1d`                      | Logs from last N days                   |
-| Anything else       | `/logs httpRequest.status>=400` | Passed as a custom gcloud filter        |
-
-Arguments can be combined freely: `/logs prod errors 50 30m`
-
-### Execution
-
-1. Resolve the GCP project ID from the environment map above.
-
-2. Build the gcloud command:
+Run the fetch script with the user's arguments:
 
 ```bash
-gcloud logging read \
-  'resource.type="cloud_run_revision" AND resource.labels.service_name="f3-auth"<SEVERITY_FILTER><TIME_FILTER><CUSTOM_FILTER>' \
-  --project=<PROJECT_ID> \
-  --limit=<LIMIT> \
-  --format='json' \
-  --freshness=<FRESHNESS>
+bash .claude/skills/logs/scripts/fetch-logs.sh $ARGS > /tmp/f3-auth-logs.json
 ```
 
-3. Run the command and parse the JSON output.
+The script handles all argument parsing (environment, severity, time range, limit, custom filters) and writes JSON to stdout. Metadata (env, project, limit, filter) is printed to stderr.
 
-4. Present a **summary table** to the user with these columns:
-   - **Timestamp** (local time, human-readable)
-   - **Severity** (color-coded if possible: ERROR=red, WARNING=yellow, INFO=default)
-   - **Method + URL** (from `httpRequest.requestMethod` + `httpRequest.requestUrl`, or textPayload)
-   - **Status** (from `httpRequest.status`)
-   - **Latency** (from `httpRequest.latency`)
-   - **Remote IP** (from `httpRequest.remoteIp`)
+### Step 2 — Format and display
 
-5. After the table, provide a brief **summary**:
-   - Total entries shown
-   - Count by severity
-   - Any error patterns or repeated 4xx/5xx status codes
-   - Notable user agents (bots vs real users)
+Pipe the JSON through the format script:
 
-6. If there are errors, offer to dig deeper into specific log entries by their `insertId`.
+```bash
+cat /tmp/f3-auth-logs.json | bash .claude/skills/logs/scripts/format-logs.sh
+```
+
+This produces a markdown table with columns: Timestamp, Severity, Method + URL, Status, Latency, Remote IP — plus a summary footer with counts and status code breakdown.
+
+### Step 3 — Follow up
+
+If there are errors, offer to dig deeper into specific log entries by their `insertId`.
 
 ### Examples
 

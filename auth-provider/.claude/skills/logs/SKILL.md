@@ -2,8 +2,8 @@
 name: logs
 description: Query Cloud Run logs for the f3-auth deployment. Use when the user wants to check auth service logs, errors, or request patterns in staging or prod.
 metadata:
-  version: "1.0.0"
-  argument-hint: "[prod|staging] [errors|warnings] [count] [timerange]"
+  version: '1.0.0'
+  argument-hint: '[prod|staging] [errors|warnings] [count] [timerange]'
 ---
 
 # F3 Auth — Cloud Run Logs

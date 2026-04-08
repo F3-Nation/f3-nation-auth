@@ -4,10 +4,10 @@ Query Cloud Run logs for the **f3-auth** deployment.
 
 ## Environment Map
 
-| Environment | GCP Project                 | URL                                    |
-|-------------|-----------------------------|----------------------------------------|
-| `staging`   | `f3-authentication-staging` | `https://staging.auth2.f3nation.com`   |
-| `prod`      | `f3-authentication`         | `https://auth2.f3nation.com`           |
+| Environment | GCP Project                 | URL                                  |
+| ----------- | --------------------------- | ------------------------------------ |
+| `staging`   | `f3-authentication-staging` | `https://staging.auth2.f3nation.com` |
+| `prod`      | `f3-authentication`         | `https://auth2.f3nation.com`         |
 
 - **Cloud Run Service:** `f3-auth` (same in both environments)
 - **Region:** `us-east1`
@@ -20,16 +20,16 @@ When the user runs this command, fetch and display recent Cloud Run logs. The fi
 
 Parse arguments in any order:
 
-| Argument | Example | Effect |
-|----------|---------|--------|
-| `staging` or `prod` | `/logs prod` | Select environment (default: `staging`) |
-| `errors` | `/logs errors` | Filter to `severity>=ERROR` |
-| `warnings` | `/logs warnings` | Filter to `severity>=WARNING` |
-| A bare number | `/logs 50` | Limit to N entries (default: 20) |
-| `<N>m` | `/logs 30m` | Logs from last N minutes |
-| `<N>h` | `/logs 2h` | Logs from last N hours |
-| `<N>d` | `/logs 1d` | Logs from last N days |
-| Anything else | `/logs httpRequest.status>=400` | Passed as a custom gcloud filter |
+| Argument            | Example                         | Effect                                  |
+| ------------------- | ------------------------------- | --------------------------------------- |
+| `staging` or `prod` | `/logs prod`                    | Select environment (default: `staging`) |
+| `errors`            | `/logs errors`                  | Filter to `severity>=ERROR`             |
+| `warnings`          | `/logs warnings`                | Filter to `severity>=WARNING`           |
+| A bare number       | `/logs 50`                      | Limit to N entries (default: 20)        |
+| `<N>m`              | `/logs 30m`                     | Logs from last N minutes                |
+| `<N>h`              | `/logs 2h`                      | Logs from last N hours                  |
+| `<N>d`              | `/logs 1d`                      | Logs from last N days                   |
+| Anything else       | `/logs httpRequest.status>=400` | Passed as a custom gcloud filter        |
 
 Arguments can be combined freely: `/logs prod errors 50 30m`
 

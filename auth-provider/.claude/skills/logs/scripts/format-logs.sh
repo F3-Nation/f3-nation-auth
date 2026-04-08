@@ -6,7 +6,7 @@ set -euo pipefail
 # Reads JSON from stdin (gcloud logging read --format=json output).
 # Prints a markdown summary table to stdout.
 #
-# Usage: fetch-logs.sh [args...] | format-logs.sh
+# Usage: cat logs.json | format-logs.sh
 
 INPUT=$(cat)
 
@@ -16,10 +16,10 @@ if [ -z "$INPUT" ] || [ "$INPUT" = "[]" ]; then
 fi
 
 # --- summary counts ---
-TOTAL=$(echo "$INPUT" | jq 'length')
-ERRORS=$(echo "$INPUT" | jq '[.[] | select(.severity == "ERROR")] | length')
-WARNINGS=$(echo "$INPUT" | jq '[.[] | select(.severity == "WARNING")] | length')
-INFOS=$(echo "$INPUT" | jq '[.[] | select(.severity == "INFO" or .severity == "DEFAULT" or .severity == null)] | length')
+TOTAL=$(echo "$INPUT" | jq 'length' 2>/dev/null || echo 0)
+ERRORS=$(echo "$INPUT" | jq '[.[] | select(.severity == "ERROR")] | length' 2>/dev/null || echo 0)
+WARNINGS=$(echo "$INPUT" | jq '[.[] | select(.severity == "WARNING")] | length' 2>/dev/null || echo 0)
+INFOS=$(echo "$INPUT" | jq '[.[] | select(.severity == "INFO" or .severity == "DEFAULT" or .severity == null)] | length' 2>/dev/null || echo 0)
 
 # --- table header ---
 echo "| Timestamp | Severity | Method + URL | Status | Latency | Remote IP |"
@@ -44,7 +44,7 @@ echo ""
 echo "**Total:** ${TOTAL} entries — ${ERRORS} errors, ${WARNINGS} warnings, ${INFOS} info/default"
 
 # --- error patterns ---
-if [ "$ERRORS" -gt 0 ] || [ "$(echo "$INPUT" | jq '[.[] | select(.httpRequest.status >= 400)] | length')" -gt 0 ]; then
+if [ "${ERRORS:-0}" -gt 0 ] || [ "$(echo "$INPUT" | jq '[.[] | select(.httpRequest.status >= 400)] | length' 2>/dev/null || echo 0)" -gt 0 ]; then
   echo ""
   echo "**Status code breakdown:**"
   echo "$INPUT" | jq -r '

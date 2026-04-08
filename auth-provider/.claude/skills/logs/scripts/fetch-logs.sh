@@ -41,30 +41,25 @@ for arg in "$@"; do
     warnings)
       SEVERITY_FILTER=' AND severity>=WARNING'
       ;;
-    *[0-9]m)
-      minutes="${arg%m}"
-      FRESHNESS="${minutes}m"
-      TIME_FILTER=" AND timestamp>=\"$(date -u -v-${minutes}M '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d "${minutes} minutes ago" '+%Y-%m-%dT%H:%M:%SZ')\""
-      ;;
-    *[0-9]h)
-      hours="${arg%h}"
-      FRESHNESS="${hours}h"
-      TIME_FILTER=" AND timestamp>=\"$(date -u -v-${hours}H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d "${hours} hours ago" '+%Y-%m-%dT%H:%M:%SZ')\""
-      ;;
-    *[0-9]d)
-      days="${arg%d}"
-      FRESHNESS="${days}d"
-      TIME_FILTER=" AND timestamp>=\"$(date -u -v-${days}d '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d "${days} days ago" '+%Y-%m-%dT%H:%M:%SZ')\""
-      ;;
-    *[0-9])
-      if [[ "$arg" =~ ^[0-9]+$ ]]; then
+    *)
+      # Use regex guards to avoid greedy glob matches on custom filters
+      if [[ "$arg" =~ ^[0-9]+m$ ]]; then
+        minutes="${arg%m}"
+        FRESHNESS="${minutes}m"
+        TIME_FILTER=" AND timestamp>=\"$(date -u -v-${minutes}M '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d "${minutes} minutes ago" '+%Y-%m-%dT%H:%M:%SZ')\""
+      elif [[ "$arg" =~ ^[0-9]+h$ ]]; then
+        hours="${arg%h}"
+        FRESHNESS="${hours}h"
+        TIME_FILTER=" AND timestamp>=\"$(date -u -v-${hours}H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d "${hours} hours ago" '+%Y-%m-%dT%H:%M:%SZ')\""
+      elif [[ "$arg" =~ ^[0-9]+d$ ]]; then
+        days="${arg%d}"
+        FRESHNESS="${days}d"
+        TIME_FILTER=" AND timestamp>=\"$(date -u -v-${days}d '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d "${days} days ago" '+%Y-%m-%dT%H:%M:%SZ')\""
+      elif [[ "$arg" =~ ^[0-9]+$ ]]; then
         LIMIT="$arg"
       else
         CUSTOM_FILTERS+=(" AND $arg")
       fi
-      ;;
-    *)
-      CUSTOM_FILTERS+=(" AND $arg")
       ;;
   esac
 done
